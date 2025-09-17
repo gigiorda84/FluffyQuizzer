@@ -84,12 +84,21 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
           {currentIndex + 1} di {cards.length}
         </div>
         
-        {showFeedback && !isLastCard && (
-          <Button variant="ghost" size="sm" onClick={handleNext} data-testid="button-next">
-            <SkipForward className="w-4 h-4 mr-2" />
-            Avanti
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => window.location.href = '/cms'}
+            className="text-xs font-bold border border-black px-3 py-1 rounded bg-white hover:bg-gray-100"
+            data-testid="button-cms"
+          >
+            CMS
+          </button>
+          {showFeedback && !isLastCard && (
+            <Button variant="ghost" size="sm" onClick={handleNext} data-testid="button-next">
+              <SkipForward className="w-4 h-4 mr-2" />
+              Nuova Domanda
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Card Content */}
@@ -118,6 +127,21 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
           />
         )}
       </div>
+
+      {/* Bottom Action Bar - Always visible "Nuova Domanda" button */}
+      {!isLastCard && (
+        <div className="bg-white border-t p-4">
+          <div className="max-w-md mx-auto">
+            <button
+              onClick={handleNext}
+              className="w-full bg-fluffy-blu text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity"
+              data-testid="button-new-question"
+            >
+              NUOVA DOMANDA
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
