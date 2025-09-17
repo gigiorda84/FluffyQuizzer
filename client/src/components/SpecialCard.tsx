@@ -7,17 +7,27 @@ interface SpecialCardProps {
   domanda: string;
   onNext: () => void;
   onFeedback: (reaction: string) => void;
+  onNextCard?: () => void;
 }
 
-export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback }: SpecialCardProps) {
+export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback, onNextCard }: SpecialCardProps) {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="fluffy-card bg-white flex flex-col overflow-hidden">
-        {/* Header */}
+        {/* Header with ID, category, and next button */}
         <div className="bg-fluffy-speciale text-white p-3">
           <div className="flex justify-between items-center">
-            <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
             <span className="text-xs font-bold">#{id}</span>
+            <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
+            {onNextCard && (
+              <button
+                onClick={onNextCard}
+                className="text-xs font-bold bg-white bg-opacity-20 hover:bg-opacity-30 px-2 py-1 rounded"
+                data-testid="button-next-card"
+              >
+                AVANTI
+              </button>
+            )}
           </div>
         </div>
 

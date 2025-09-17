@@ -15,10 +15,11 @@ interface QuizCardProps {
   battuta?: string;
   onAnswer: (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => void;
   onFeedback: (reaction: string) => void;
+  onNext?: () => void;
 }
 
 export default function QuizCard({ 
-  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, onAnswer, onFeedback 
+  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, onAnswer, onFeedback, onNext 
 }: QuizCardProps) {
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -62,11 +63,20 @@ export default function QuizCard({
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="fluffy-card bg-white flex flex-col overflow-hidden">
-        {/* Header with category and ID */}
+        {/* Header with ID, category, and next button */}
         <div className={`p-3 text-white relative ${getCategoryColorClass(colore)}`}>
           <div className="flex justify-between items-center">
-            <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
             <span className="text-xs font-bold">#{id}</span>
+            <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
+            {onNext && (
+              <button
+                onClick={onNext}
+                className="text-xs font-bold bg-white bg-opacity-20 hover:bg-opacity-30 px-2 py-1 rounded"
+                data-testid="button-next-card"
+              >
+                AVANTI
+              </button>
+            )}
           </div>
         </div>
 
