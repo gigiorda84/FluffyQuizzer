@@ -68,15 +68,16 @@ export default function QuizCard({
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold">#{id}</span>
             <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
-            {onNext && (
-              <button
-                onClick={onNext}
-                className="text-xs font-bold bg-white bg-opacity-20 hover:bg-opacity-30 px-2 py-1 rounded"
-                data-testid="button-next-card"
-              >
-                AVANTI
-              </button>
-            )}
+            <button
+              onClick={onNext || (() => {})}
+              className={`text-xs font-bold px-2 py-1 rounded transition-opacity ${
+                onNext ? 'bg-white text-black hover:bg-gray-100' : 'bg-white bg-opacity-30 text-white cursor-not-allowed'
+              }`}
+              disabled={!onNext}
+              data-testid="button-next-card"
+            >
+              AVANTI
+            </button>
           </div>
         </div>
 

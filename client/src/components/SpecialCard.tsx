@@ -19,15 +19,16 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold">#{id}</span>
             <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
-            {onNextCard && (
-              <button
-                onClick={onNextCard}
-                className="text-xs font-bold bg-white bg-opacity-20 hover:bg-opacity-30 px-2 py-1 rounded"
-                data-testid="button-next-card"
-              >
-                AVANTI
-              </button>
-            )}
+            <button
+              onClick={onNextCard || (() => {})}
+              className={`text-xs font-bold px-2 py-1 rounded transition-opacity ${
+                onNextCard ? 'bg-white text-black hover:bg-gray-100' : 'bg-white bg-opacity-30 text-white cursor-not-allowed'
+              }`}
+              disabled={!onNextCard}
+              data-testid="button-next-card"
+            >
+              AVANTI
+            </button>
           </div>
         </div>
 
