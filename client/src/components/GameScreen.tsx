@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, SkipForward } from "lucide-react";
+import { ArrowLeft, SkipForward, RefreshCw } from "lucide-react";
 import QuizCard from "./QuizCard";
 import SpecialCard from "./SpecialCard";
 import FeedbackButtons from "./FeedbackButtons";
+import { apiRequest } from "@/lib/queryClient";
 
 interface Card {
   id: string;
@@ -16,60 +18,130 @@ interface Card {
   corretta?: 'A' | 'B' | 'C';
   battuta?: string;
   tipo: 'quiz' | 'speciale';
+  createdAt: string;
 }
 
 interface GameScreenProps {
-  cards: Card[];
+  selectedCategory?: string | null;
   onBack: () => void;
-  onFeedback: (cardId: string, reaction: string, correct?: boolean, timeMs?: number) => void;
 }
 
-export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+export default function GameScreen({ selectedCategory, onBack }: GameScreenProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [answered, setAnswered] = useState(false);
+  const [cardKey, setCardKey] = useState(0); // For forcing re-fetch
 
-  const currentCard = cards[currentIndex];
-  // Remove isLastCard check since we want infinite random selection
+  // Fetch random card (optionally filtered by category)
+  const { data: currentCard, isLoading, error, refetch } = useQuery({
+    queryKey: ['cards', 'random', selectedCategory || 'all', cardKey],
+    queryFn: async () => {
+      const url = selectedCategory && selectedCategory !== 'mix' 
+        ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
+        : '/api/cards/random';
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch card');
+      }
+      return response.json() as Card;
+    },
+    enabled: selectedCategory !== null, // Prevent initial fetch when category is null
+    keepPreviousData: true, // Smoother UX during card transitions
+    refetchOnWindowFocus: false,
+  });
+
+  // Feedback mutation
+  const feedbackMutation = useMutation({
+    mutationFn: async (feedbackData: {
+      cardId: string;
+      deviceId: string;
+      reaction: string;
+      correct?: boolean;
+      timeMs?: number;
+    }) => {
+      return apiRequest('POST', '/api/feedback', feedbackData);
+    },
+    onError: (error) => {
+      console.error('Failed to send feedback:', error);
+    },
+  });
 
   useEffect(() => {
     // Reset state when card changes
     setShowFeedback(false);
     setAnswered(false);
-  }, [currentIndex]);
+  }, [cardKey]);
+
+  const getDeviceId = () => {
+    let deviceId = localStorage.getItem('fluffy-device-id');
+    if (!deviceId) {
+      deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('fluffy-device-id', deviceId);
+    }
+    return deviceId;
+  };
 
   const handleAnswer = (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => {
     setAnswered(true);
     setShowFeedback(true);
-    onFeedback(currentCard.id, 'answered', correct, timeMs);
+    
+    if (currentCard) {
+      feedbackMutation.mutate({
+        cardId: currentCard.id,
+        deviceId: getDeviceId(),
+        reaction: 'answered',
+        correct,
+        timeMs,
+      });
+    }
   };
 
   const handleNext = () => {
-    // Generate random index different from current one
-    let newIndex;
-    do {
-      newIndex = Math.floor(Math.random() * cards.length);
-    } while (newIndex === currentIndex && cards.length > 1);
-    
-    setCurrentIndex(newIndex);
+    // Increment key to trigger new random card fetch
+    setCardKey(prev => prev + 1);
   };
 
   const handleSpecialNext = () => {
     setShowFeedback(true);
-    onFeedback(currentCard.id, 'viewed');
+    
+    if (currentCard) {
+      feedbackMutation.mutate({
+        cardId: currentCard.id,
+        deviceId: getDeviceId(),
+        reaction: 'viewed',
+      });
+    }
   };
 
   const handleFeedbackReaction = (reaction: string) => {
-    onFeedback(currentCard.id, reaction);
+    if (currentCard) {
+      feedbackMutation.mutate({
+        cardId: currentCard.id,
+        deviceId: getDeviceId(),
+        reaction,
+      });
+    }
   };
 
-  if (!currentCard) {
+  if (isLoading || selectedCategory === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold">🎉 Complimenti!</h2>
-          <p className="text-muted-foreground">Hai completato tutte le carte!</p>
-          <Button onClick={onBack}>Torna al menu</Button>
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">Caricando carta...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !currentCard) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-destructive">😅 Oops!</h2>
+          <p className="text-muted-foreground">Errore nel caricamento della carta</p>
+          <Button onClick={() => refetch()}>Riprova</Button>
+          <Button variant="outline" onClick={onBack}>Torna al menu</Button>
         </div>
       </div>
     );
@@ -85,7 +157,7 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
         </Button>
         
         <div className="text-sm text-muted-foreground">
-          {currentIndex + 1} di {cards.length}
+          Carta #{currentCard.id}
         </div>
         
         <div className="flex gap-2">
