@@ -13,6 +13,7 @@ export default function QuizCardExample() {
       corretta="B"
       battuta="BUCHETTO ASTRO: Gli astronauti volevano la spirulina, non il sushi! Il tuo culetto nello spazio ringrazia, senza microonde ma con tanta fibra verde!"
       onAnswer={(option, correct, timeMs) => console.log('Answer:', { option, correct, timeMs })}
+      onFeedback={(reaction) => console.log('Feedback:', reaction)}
     />
   );
 }

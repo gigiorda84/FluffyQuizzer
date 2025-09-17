@@ -14,10 +14,11 @@ interface QuizCardProps {
   corretta: 'A' | 'B' | 'C';
   battuta?: string;
   onAnswer: (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => void;
+  onFeedback: (reaction: string) => void;
 }
 
 export default function QuizCard({ 
-  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, onAnswer 
+  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, onAnswer, onFeedback 
 }: QuizCardProps) {
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -59,79 +60,163 @@ export default function QuizCard({
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      {/* Header */}
-      <div className={`p-3 text-center ${getCategoryColorClass(colore)} relative`}>
+    <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto">
+      {/* Header with category and ID */}
+      <div className={`p-4 text-white relative ${getCategoryColorClass(colore)}`}>
         <div className="flex justify-between items-center">
-          <h2 className="font-bold text-sm">{categoria}</h2>
-          <span className="text-sm">#{id}</span>
+          <h2 className="font-bold text-sm uppercase">{categoria}</h2>
+          <span className="text-sm font-bold">#{id}</span>
         </div>
       </div>
 
-      {/* Question Card */}
-      <div className="flex-1 p-6 space-y-8 bg-white">
-        <h1 className="text-xl font-bold text-center leading-tight text-black uppercase tracking-wide">
-          {domanda}
-        </h1>
+      {/* Main Card Content */}
+      <div className="flex-1 p-6 bg-white space-y-8">
+        {/* Question */}
+        <div className="text-center">
+          <h1 className="text-lg font-bold text-black leading-tight">
+            {domanda}
+          </h1>
+        </div>
 
-        {/* Answer Options - Horizontal Layout like PDF */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <Button
-            variant={getButtonVariant('A')}
-            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
-              showResult && corretta === 'A' ? 'bg-green-100 border-green-500' : 
-              showResult && selectedOption === 'A' && corretta !== 'A' ? 'bg-red-100 border-red-500' :
-              'bg-white hover:bg-gray-50'
+        {/* Answer Options - 3 columns as in Canva */}
+        <div className="grid grid-cols-3 gap-4 mt-8">
+          <div
+            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
+              showResult && corretta === 'A' 
+                ? 'bg-green-100 border-green-500 text-green-800' 
+                : showResult && selectedOption === 'A' && corretta !== 'A'
+                ? 'bg-red-100 border-red-500 text-red-800'
+                : selectedOption === 'A'
+                ? 'bg-blue-100 border-blue-500'
+                : 'bg-white border-gray-300 hover:bg-gray-50'
             }`}
             onClick={() => handleAnswer('A')}
-            disabled={!!selectedOption}
             data-testid="button-answer-a"
           >
-            <div className="space-y-1">
-              {getButtonIcon('A')}
-              <div className="text-black font-medium">{opzioneA}</div>
+            <div className="text-sm font-medium text-black leading-tight">
+              {opzioneA}
             </div>
-          </Button>
+            {showResult && corretta === 'A' && (
+              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
+            )}
+            {showResult && selectedOption === 'A' && corretta !== 'A' && (
+              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
+            )}
+          </div>
 
-          <Button
-            variant={getButtonVariant('B')}
-            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
-              showResult && corretta === 'B' ? 'bg-green-100 border-green-500' : 
-              showResult && selectedOption === 'B' && corretta !== 'B' ? 'bg-red-100 border-red-500' :
-              'bg-white hover:bg-gray-50'
+          <div
+            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
+              showResult && corretta === 'B' 
+                ? 'bg-green-100 border-green-500 text-green-800' 
+                : showResult && selectedOption === 'B' && corretta !== 'B'
+                ? 'bg-red-100 border-red-500 text-red-800'
+                : selectedOption === 'B'
+                ? 'bg-blue-100 border-blue-500'
+                : 'bg-white border-gray-300 hover:bg-gray-50'
             }`}
             onClick={() => handleAnswer('B')}
-            disabled={!!selectedOption}
             data-testid="button-answer-b"
           >
-            <div className="space-y-1">
-              {getButtonIcon('B')}
-              <div className="text-black font-medium">{opzioneB}</div>
+            <div className="text-sm font-medium text-black leading-tight">
+              {opzioneB}
             </div>
-          </Button>
+            {showResult && corretta === 'B' && (
+              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
+            )}
+            {showResult && selectedOption === 'B' && corretta !== 'B' && (
+              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
+            )}
+          </div>
 
-          <Button
-            variant={getButtonVariant('C')}
-            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
-              showResult && corretta === 'C' ? 'bg-green-100 border-green-500' : 
-              showResult && selectedOption === 'C' && corretta !== 'C' ? 'bg-red-100 border-red-500' :
-              'bg-white hover:bg-gray-50'
+          <div
+            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
+              showResult && corretta === 'C' 
+                ? 'bg-green-100 border-green-500 text-green-800' 
+                : showResult && selectedOption === 'C' && corretta !== 'C'
+                ? 'bg-red-100 border-red-500 text-red-800'
+                : selectedOption === 'C'
+                ? 'bg-blue-100 border-blue-500'
+                : 'bg-white border-gray-300 hover:bg-gray-50'
             }`}
             onClick={() => handleAnswer('C')}
-            disabled={!!selectedOption}
             data-testid="button-answer-c"
           >
-            <div className="space-y-1">
-              {getButtonIcon('C')}
-              <div className="text-black font-medium">{opzioneC}</div>
+            <div className="text-sm font-medium text-black leading-tight">
+              {opzioneC}
             </div>
+            {showResult && corretta === 'C' && (
+              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
+            )}
+            {showResult && selectedOption === 'C' && corretta !== 'C' && (
+              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
+            )}
+          </div>
+        </div>
+
+        {/* Feedback Buttons Grid - Exactly as in Canva: 2 rows x 3 cols */}
+        <div className="mt-12 grid grid-cols-3 gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('review')}
+            data-testid="button-feedback-review"
+          >
+            REVIEW
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('easy')}
+            data-testid="button-feedback-easy"
+          >
+            EASY
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('fun')}
+            data-testid="button-feedback-fun"
+          >
+            FUN
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('top')}
+            data-testid="button-feedback-top"
+          >
+            TOP
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('hard')}
+            data-testid="button-feedback-hard"
+          >
+            HARD
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            onClick={() => onFeedback('boring')}
+            data-testid="button-feedback-boring"
+          >
+            BORING
           </Button>
         </div>
 
         {/* Result Feedback - Buchetto Style */}
         {showResult && battuta && (
-          <div className="bg-gray-50 p-4 border border-gray-200 text-center">
-            <p className="text-sm text-black font-medium italic leading-relaxed">{battuta}</p>
+          <div className="mt-6 p-4 bg-gray-50 border border-gray-200">
+            <p className="text-sm text-black font-medium italic leading-relaxed text-center">
+              {battuta}
+            </p>
           </div>
         )}
       </div>

@@ -27,35 +27,11 @@ export default function FeedbackButtons({ cardId, onFeedback, disabled = false }
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 p-4">
+    <div className="bg-white p-4">
       <div className="max-w-md mx-auto">
-        {/* Feedback buttons in horizontal row like PDF */}
-        <div className="flex justify-center gap-4">
-          {feedbackOptions.map((option) => {
-            const isSelected = selectedReactions.has(option.id);
-            return (
-              <Button
-                key={option.id}
-                variant="ghost"
-                size="sm"
-                className={`text-xs font-bold tracking-wide px-3 py-2 ${
-                  isSelected 
-                    ? 'bg-gray-800 text-white' 
-                    : 'text-black border border-gray-300 hover:bg-gray-100'
-                }`}
-                onClick={() => handleFeedback(option.id)}
-                disabled={disabled}
-                data-testid={`button-feedback-${option.id}`}
-              >
-                {option.label}
-              </Button>
-            );
-          })}
-        </div>
-        
         {selectedReactions.size > 0 && (
-          <div className="text-center mt-3">
-            <span className="text-xs text-gray-600">
+          <div className="text-center mb-4">
+            <span className="text-sm text-gray-600">
               Grazie per il feedback!
             </span>
           </div>

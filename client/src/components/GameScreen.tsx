@@ -106,6 +106,7 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
             corretta={currentCard.corretta!}
             battuta={currentCard.battuta}
             onAnswer={handleAnswer}
+            onFeedback={handleFeedbackReaction}
           />
         ) : (
           <SpecialCard
@@ -113,17 +114,11 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
             categoria={currentCard.categoria}
             domanda={currentCard.domanda}
             onNext={handleSpecialNext}
+            onFeedback={handleFeedbackReaction}
           />
         )}
       </div>
 
-      {/* Feedback Section */}
-      {showFeedback && (
-        <FeedbackButtons
-          cardId={currentCard.id}
-          onFeedback={handleFeedbackReaction}
-        />
-      )}
     </div>
   );
 }
