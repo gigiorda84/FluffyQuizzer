@@ -69,11 +69,8 @@ export default function QuizCard({
             <span className="text-xs font-bold">#{id}</span>
             <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
             <button
-              onClick={onNext || (() => {})}
-              className={`text-xs font-bold px-2 py-1 rounded transition-opacity ${
-                onNext ? 'bg-white text-black hover:bg-gray-100' : 'bg-white bg-opacity-30 text-white cursor-not-allowed'
-              }`}
-              disabled={!onNext}
+              onClick={onNext}
+              className="text-xs font-bold px-2 py-1 rounded bg-white text-black hover:bg-gray-100"
               data-testid="button-next-card"
             >
               AVANTI

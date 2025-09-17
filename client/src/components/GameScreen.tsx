@@ -30,7 +30,7 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
   const [answered, setAnswered] = useState(false);
 
   const currentCard = cards[currentIndex];
-  const isLastCard = currentIndex === cards.length - 1;
+  // Remove isLastCard check since we want infinite random selection
 
   useEffect(() => {
     // Reset state when card changes
@@ -45,9 +45,13 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
   };
 
   const handleNext = () => {
-    if (!isLastCard) {
-      setCurrentIndex(prev => prev + 1);
-    }
+    // Generate random index different from current one
+    let newIndex;
+    do {
+      newIndex = Math.floor(Math.random() * cards.length);
+    } while (newIndex === currentIndex && cards.length > 1);
+    
+    setCurrentIndex(newIndex);
   };
 
   const handleSpecialNext = () => {
@@ -92,12 +96,6 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
           >
             CMS
           </button>
-          {showFeedback && !isLastCard && (
-            <Button variant="ghost" size="sm" onClick={handleNext} data-testid="button-next">
-              <SkipForward className="w-4 h-4 mr-2" />
-              Nuova Domanda
-            </Button>
-          )}
         </div>
       </div>
 
@@ -116,7 +114,7 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
             battuta={currentCard.battuta}
             onAnswer={handleAnswer}
             onFeedback={handleFeedbackReaction}
-            onNext={!isLastCard ? handleNext : undefined}
+            onNext={handleNext}
           />
         ) : (
           <SpecialCard
@@ -125,25 +123,23 @@ export default function GameScreen({ cards, onBack, onFeedback }: GameScreenProp
             domanda={currentCard.domanda}
             onNext={handleSpecialNext}
             onFeedback={handleFeedbackReaction}
-            onNextCard={!isLastCard ? handleNext : undefined}
+            onNextCard={handleNext}
           />
         )}
       </div>
 
       {/* Bottom Action Bar - Always visible "Nuova Domanda" button */}
-      {!isLastCard && (
-        <div className="bg-white border-t p-4">
-          <div className="max-w-md mx-auto">
-            <button
-              onClick={handleNext}
-              className="w-full bg-fluffy-blu text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity"
-              data-testid="button-new-question"
-            >
-              NUOVA DOMANDA
-            </button>
-          </div>
+      <div className="bg-white border-t p-4">
+        <div className="max-w-md mx-auto">
+          <button
+            onClick={handleNext}
+            className="w-full bg-fluffy-blu text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity"
+            data-testid="button-new-question"
+          >
+            NUOVA DOMANDA
+          </button>
         </div>
-      )}
+      </div>
 
     </div>
   );
