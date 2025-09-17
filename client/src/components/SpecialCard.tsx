@@ -15,20 +15,20 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
       {/* Header */}
       <div className="bg-fluffy-speciale text-white p-4">
         <div className="flex justify-between items-center">
-          <h2 className="font-bold text-sm uppercase">{categoria}</h2>
-          <span className="text-sm font-bold">#{id}</span>
+          <h2 className="font-extrabold text-sm uppercase">{categoria}</h2>
+          <span className="text-sm font-extrabold">#{id}</span>
         </div>
       </div>
 
       {/* Instruction Card */}
       <div className="flex-1 p-6 bg-white space-y-8">
         <div className="text-center space-y-8">
-          <h1 className="text-2xl font-bold text-black">
+          <h1 className="text-2xl font-extrabold text-black uppercase">
             Duello di Buchetti
           </h1>
 
           <div className="space-y-6">
-            <p className="text-sm text-black leading-relaxed">
+            <p className="text-sm text-black font-bold leading-relaxed">
               {domanda}
             </p>
           </div>
@@ -38,7 +38,7 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
             <Button
               variant="outline"
               size="sm"
-              className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+              className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
               onClick={() => onFeedback('review')}
               data-testid="button-feedback-review"
             >
@@ -47,7 +47,7 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
             <Button
               variant="outline"
               size="sm"
-              className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+              className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
               onClick={() => onFeedback('fun')}
               data-testid="button-feedback-fun"
             >
@@ -56,7 +56,7 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
             <Button
               variant="outline"
               size="sm"
-              className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+              className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
               onClick={() => onFeedback('top')}
               data-testid="button-feedback-top"
             >
@@ -65,7 +65,7 @@ export default function SpecialCard({ id, categoria, domanda, onNext, onFeedback
             <Button
               variant="outline"
               size="sm"
-              className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+              className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
               onClick={() => onFeedback('boring')}
               data-testid="button-feedback-boring"
             >

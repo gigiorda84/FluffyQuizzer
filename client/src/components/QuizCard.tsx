@@ -64,8 +64,8 @@ export default function QuizCard({
       {/* Header with category and ID */}
       <div className={`p-4 text-white relative ${getCategoryColorClass(colore)}`}>
         <div className="flex justify-between items-center">
-          <h2 className="font-bold text-sm uppercase">{categoria}</h2>
-          <span className="text-sm font-bold">#{id}</span>
+          <h2 className="font-extrabold text-sm uppercase">{categoria}</h2>
+          <span className="text-sm font-extrabold">#{id}</span>
         </div>
       </div>
 
@@ -73,7 +73,7 @@ export default function QuizCard({
       <div className="flex-1 p-6 bg-white space-y-8">
         {/* Question */}
         <div className="text-center">
-          <h1 className="text-lg font-bold text-black leading-tight">
+          <h1 className="text-lg font-extrabold text-black leading-tight uppercase">
             {domanda}
           </h1>
         </div>
@@ -93,7 +93,7 @@ export default function QuizCard({
             onClick={() => handleAnswer('A')}
             data-testid="button-answer-a"
           >
-            <div className="text-sm font-medium text-black leading-tight">
+            <div className="text-sm font-bold text-black leading-tight">
               {opzioneA}
             </div>
             {showResult && corretta === 'A' && (
@@ -117,7 +117,7 @@ export default function QuizCard({
             onClick={() => handleAnswer('B')}
             data-testid="button-answer-b"
           >
-            <div className="text-sm font-medium text-black leading-tight">
+            <div className="text-sm font-bold text-black leading-tight">
               {opzioneB}
             </div>
             {showResult && corretta === 'B' && (
@@ -141,7 +141,7 @@ export default function QuizCard({
             onClick={() => handleAnswer('C')}
             data-testid="button-answer-c"
           >
-            <div className="text-sm font-medium text-black leading-tight">
+            <div className="text-sm font-bold text-black leading-tight">
               {opzioneC}
             </div>
             {showResult && corretta === 'C' && (
@@ -158,7 +158,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('review')}
             data-testid="button-feedback-review"
           >
@@ -167,7 +167,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('easy')}
             data-testid="button-feedback-easy"
           >
@@ -176,7 +176,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('fun')}
             data-testid="button-feedback-fun"
           >
@@ -185,7 +185,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('top')}
             data-testid="button-feedback-top"
           >
@@ -194,7 +194,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('hard')}
             data-testid="button-feedback-hard"
           >
@@ -203,7 +203,7 @@ export default function QuizCard({
           <Button
             variant="outline"
             size="sm"
-            className="text-xs font-bold tracking-wider border-black text-black hover:bg-gray-100"
+            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
             onClick={() => onFeedback('boring')}
             data-testid="button-feedback-boring"
           >
@@ -214,7 +214,7 @@ export default function QuizCard({
         {/* Result Feedback - Buchetto Style */}
         {showResult && battuta && (
           <div className="mt-6 p-4 bg-gray-50 border border-gray-200">
-            <p className="text-sm text-black font-medium italic leading-relaxed text-center">
+            <p className="text-sm text-black font-bold italic leading-relaxed text-center">
               {battuta}
             </p>
           </div>
