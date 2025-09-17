@@ -60,165 +60,155 @@ export default function QuizCard({
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col max-w-md mx-auto">
-      {/* Header with category and ID */}
-      <div className={`p-4 text-white relative ${getCategoryColorClass(colore)}`}>
-        <div className="flex justify-between items-center">
-          <h2 className="font-extrabold text-sm uppercase">{categoria}</h2>
-          <span className="text-sm font-extrabold">#{id}</span>
-        </div>
-      </div>
-
-      {/* Main Card Content */}
-      <div className="flex-1 p-6 bg-white space-y-8">
-        {/* Question */}
-        <div className="text-center">
-          <h1 className="text-lg font-extrabold text-black leading-tight uppercase">
-            {domanda}
-          </h1>
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <div className="fluffy-card bg-white flex flex-col overflow-hidden">
+        {/* Header with category and ID */}
+        <div className={`p-3 text-white relative ${getCategoryColorClass(colore)}`}>
+          <div className="flex justify-between items-center">
+            <h2 className="font-bold text-xs uppercase tracking-wide">{categoria}</h2>
+            <span className="text-xs font-bold">#{id}</span>
+          </div>
         </div>
 
-        {/* Answer Options - 3 columns as in Canva */}
-        <div className="grid grid-cols-3 gap-4 mt-8">
-          <div
-            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
-              showResult && corretta === 'A' 
-                ? 'bg-green-100 border-green-500 text-green-800' 
-                : showResult && selectedOption === 'A' && corretta !== 'A'
-                ? 'bg-red-100 border-red-500 text-red-800'
-                : selectedOption === 'A'
-                ? 'bg-blue-100 border-blue-500'
-                : 'bg-white border-gray-300 hover:bg-gray-50'
-            }`}
-            onClick={() => handleAnswer('A')}
-            data-testid="button-answer-a"
-          >
-            <div className="text-sm font-bold text-black leading-tight">
-              {opzioneA}
+        {/* Main Card Content */}
+        <div className="flex-1 p-4 bg-white">
+          {/* Question */}
+          <div className="text-center mb-6">
+            <h1 className="text-base font-bold text-black leading-tight">
+              {domanda}
+            </h1>
+          </div>
+
+          {/* Answer Options - 3 columns exactly as in Canva */}
+          <div className="grid grid-cols-3 gap-2 mb-6">
+            <div
+              className={`text-center p-3 border-2 border-black rounded-lg cursor-pointer transition-colors min-h-[80px] flex flex-col justify-center ${
+                showResult && corretta === 'A' 
+                  ? 'bg-green-200' 
+                  : showResult && selectedOption === 'A' && corretta !== 'A'
+                  ? 'bg-red-200'
+                  : selectedOption === 'A'
+                  ? 'bg-blue-100'
+                  : 'bg-white hover:bg-gray-50'
+              }`}
+              onClick={() => handleAnswer('A')}
+              data-testid="button-answer-a"
+            >
+              <div className="text-xs font-bold text-black leading-tight">
+                {opzioneA}
+              </div>
+              {showResult && corretta === 'A' && (
+                <CheckCircle className="w-4 h-4 mx-auto mt-1 text-green-600" />
+              )}
+              {showResult && selectedOption === 'A' && corretta !== 'A' && (
+                <XCircle className="w-4 h-4 mx-auto mt-1 text-red-600" />
+              )}
             </div>
-            {showResult && corretta === 'A' && (
-              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
-            )}
-            {showResult && selectedOption === 'A' && corretta !== 'A' && (
-              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
-            )}
-          </div>
 
-          <div
-            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
-              showResult && corretta === 'B' 
-                ? 'bg-green-100 border-green-500 text-green-800' 
-                : showResult && selectedOption === 'B' && corretta !== 'B'
-                ? 'bg-red-100 border-red-500 text-red-800'
-                : selectedOption === 'B'
-                ? 'bg-blue-100 border-blue-500'
-                : 'bg-white border-gray-300 hover:bg-gray-50'
-            }`}
-            onClick={() => handleAnswer('B')}
-            data-testid="button-answer-b"
-          >
-            <div className="text-sm font-bold text-black leading-tight">
-              {opzioneB}
+            <div
+              className={`text-center p-3 border-2 border-black rounded-lg cursor-pointer transition-colors min-h-[80px] flex flex-col justify-center ${
+                showResult && corretta === 'B' 
+                  ? 'bg-green-200' 
+                  : showResult && selectedOption === 'B' && corretta !== 'B'
+                  ? 'bg-red-200'
+                  : selectedOption === 'B'
+                  ? 'bg-blue-100'
+                  : 'bg-white hover:bg-gray-50'
+              }`}
+              onClick={() => handleAnswer('B')}
+              data-testid="button-answer-b"
+            >
+              <div className="text-xs font-bold text-black leading-tight">
+                {opzioneB}
+              </div>
+              {showResult && corretta === 'B' && (
+                <CheckCircle className="w-4 h-4 mx-auto mt-1 text-green-600" />
+              )}
+              {showResult && selectedOption === 'B' && corretta !== 'B' && (
+                <XCircle className="w-4 h-4 mx-auto mt-1 text-red-600" />
+              )}
             </div>
-            {showResult && corretta === 'B' && (
-              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
-            )}
-            {showResult && selectedOption === 'B' && corretta !== 'B' && (
-              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
-            )}
-          </div>
 
-          <div
-            className={`text-center p-4 border-2 rounded cursor-pointer transition-colors ${
-              showResult && corretta === 'C' 
-                ? 'bg-green-100 border-green-500 text-green-800' 
-                : showResult && selectedOption === 'C' && corretta !== 'C'
-                ? 'bg-red-100 border-red-500 text-red-800'
-                : selectedOption === 'C'
-                ? 'bg-blue-100 border-blue-500'
-                : 'bg-white border-gray-300 hover:bg-gray-50'
-            }`}
-            onClick={() => handleAnswer('C')}
-            data-testid="button-answer-c"
-          >
-            <div className="text-sm font-bold text-black leading-tight">
-              {opzioneC}
+            <div
+              className={`text-center p-3 border-2 border-black rounded-lg cursor-pointer transition-colors min-h-[80px] flex flex-col justify-center ${
+                showResult && corretta === 'C' 
+                  ? 'bg-green-200' 
+                  : showResult && selectedOption === 'C' && corretta !== 'C'
+                  ? 'bg-red-200'
+                  : selectedOption === 'C'
+                  ? 'bg-blue-100'
+                  : 'bg-white hover:bg-gray-50'
+              }`}
+              onClick={() => handleAnswer('C')}
+              data-testid="button-answer-c"
+            >
+              <div className="text-xs font-bold text-black leading-tight">
+                {opzioneC}
+              </div>
+              {showResult && corretta === 'C' && (
+                <CheckCircle className="w-4 h-4 mx-auto mt-1 text-green-600" />
+              )}
+              {showResult && selectedOption === 'C' && corretta !== 'C' && (
+                <XCircle className="w-4 h-4 mx-auto mt-1 text-red-600" />
+              )}
             </div>
-            {showResult && corretta === 'C' && (
-              <CheckCircle className="w-5 h-5 mx-auto mt-2 text-green-600" />
-            )}
-            {showResult && selectedOption === 'C' && corretta !== 'C' && (
-              <XCircle className="w-5 h-5 mx-auto mt-2 text-red-600" />
-            )}
           </div>
-        </div>
 
-        {/* Feedback Buttons Grid - Exactly as in Canva: 2 rows x 3 cols */}
-        <div className="mt-12 grid grid-cols-3 gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('review')}
-            data-testid="button-feedback-review"
-          >
-            REVIEW
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('easy')}
-            data-testid="button-feedback-easy"
-          >
-            EASY
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('fun')}
-            data-testid="button-feedback-fun"
-          >
-            FUN
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('top')}
-            data-testid="button-feedback-top"
-          >
-            TOP
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('hard')}
-            data-testid="button-feedback-hard"
-          >
-            HARD
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-extrabold tracking-wider border-black text-black hover:bg-gray-100"
-            onClick={() => onFeedback('boring')}
-            data-testid="button-feedback-boring"
-          >
-            BORING
-          </Button>
-        </div>
-
-        {/* Result Feedback - Buchetto Style */}
-        {showResult && battuta && (
-          <div className="mt-6 p-4 bg-gray-50 border border-gray-200">
-            <p className="text-sm text-black font-bold italic leading-relaxed text-center">
-              {battuta}
-            </p>
+          {/* Feedback Buttons Grid - Exactly as in Canva: 2 rows x 3 cols */}
+          <div className="grid grid-cols-3 gap-1 mb-4">
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('review')}
+              data-testid="button-feedback-review"
+            >
+              REVIEW
+            </button>
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('easy')}
+              data-testid="button-feedback-easy"
+            >
+              EASY
+            </button>
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('fun')}
+              data-testid="button-feedback-fun"
+            >
+              FUN
+            </button>
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('top')}
+              data-testid="button-feedback-top"
+            >
+              TOP
+            </button>
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('hard')}
+              data-testid="button-feedback-hard"
+            >
+              HARD
+            </button>
+            <button
+              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
+              onClick={() => onFeedback('boring')}
+              data-testid="button-feedback-boring"
+            >
+              BORING
+            </button>
           </div>
-        )}
+
+          {/* Result Feedback - Buchetto Style */}
+          {showResult && battuta && (
+            <div className="mt-2 p-2 bg-gray-50 border border-gray-300 rounded">
+              <p className="text-xs text-black font-bold italic leading-relaxed text-center">
+                {battuta}
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
