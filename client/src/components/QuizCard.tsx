@@ -59,78 +59,82 @@ export default function QuizCard({
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
-      <div className={`rounded-t-lg p-4 text-center ${getCategoryColorClass(colore)}`}>
-        <h2 className="font-bold text-sm opacity-90">{categoria}</h2>
-        <span className="text-xs opacity-75">#{id}</span>
+      <div className={`p-3 text-center ${getCategoryColorClass(colore)} relative`}>
+        <div className="flex justify-between items-center">
+          <h2 className="font-bold text-sm">{categoria}</h2>
+          <span className="text-sm">#{id}</span>
+        </div>
       </div>
 
       {/* Question Card */}
-      <Card className="flex-1 rounded-t-none p-6 space-y-6">
-        <h1 className="text-xl font-bold text-center leading-tight text-foreground">
+      <div className="flex-1 p-6 space-y-8 bg-white">
+        <h1 className="text-xl font-bold text-center leading-tight text-black uppercase tracking-wide">
           {domanda}
         </h1>
 
-        {/* Answer Options */}
-        <div className="space-y-4">
+        {/* Answer Options - Horizontal Layout like PDF */}
+        <div className="grid grid-cols-3 gap-2 text-center">
           <Button
             variant={getButtonVariant('A')}
-            size="lg"
-            className="w-full h-auto p-4 text-left whitespace-normal"
+            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
+              showResult && corretta === 'A' ? 'bg-green-100 border-green-500' : 
+              showResult && selectedOption === 'A' && corretta !== 'A' ? 'bg-red-100 border-red-500' :
+              'bg-white hover:bg-gray-50'
+            }`}
             onClick={() => handleAnswer('A')}
             disabled={!!selectedOption}
             data-testid="button-answer-a"
           >
-            <div className="flex items-center gap-3">
+            <div className="space-y-1">
               {getButtonIcon('A')}
-              <span className="flex-1">{opzioneA}</span>
+              <div className="text-black font-medium">{opzioneA}</div>
             </div>
           </Button>
 
           <Button
             variant={getButtonVariant('B')}
-            size="lg"
-            className="w-full h-auto p-4 text-left whitespace-normal"
+            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
+              showResult && corretta === 'B' ? 'bg-green-100 border-green-500' : 
+              showResult && selectedOption === 'B' && corretta !== 'B' ? 'bg-red-100 border-red-500' :
+              'bg-white hover:bg-gray-50'
+            }`}
             onClick={() => handleAnswer('B')}
             disabled={!!selectedOption}
             data-testid="button-answer-b"
           >
-            <div className="flex items-center gap-3">
+            <div className="space-y-1">
               {getButtonIcon('B')}
-              <span className="flex-1">{opzioneB}</span>
+              <div className="text-black font-medium">{opzioneB}</div>
             </div>
           </Button>
 
           <Button
             variant={getButtonVariant('C')}
-            size="lg"
-            className="w-full h-auto p-4 text-left whitespace-normal"
+            className={`h-auto p-4 text-xs leading-tight whitespace-normal border border-gray-300 ${
+              showResult && corretta === 'C' ? 'bg-green-100 border-green-500' : 
+              showResult && selectedOption === 'C' && corretta !== 'C' ? 'bg-red-100 border-red-500' :
+              'bg-white hover:bg-gray-50'
+            }`}
             onClick={() => handleAnswer('C')}
             disabled={!!selectedOption}
             data-testid="button-answer-c"
           >
-            <div className="flex items-center gap-3">
+            <div className="space-y-1">
               {getButtonIcon('C')}
-              <span className="flex-1">{opzioneC}</span>
+              <div className="text-black font-medium">{opzioneC}</div>
             </div>
           </Button>
         </div>
 
-        {/* Result Feedback */}
-        {showResult && (
-          <div className={`p-4 rounded-lg text-center ${
-            selectedOption === corretta ? 'bg-fluffy-success/10 text-fluffy-success' : 'bg-fluffy-error/10 text-fluffy-error'
-          }`}>
-            <div className="font-bold text-lg mb-2">
-              {selectedOption === corretta ? '🎉 Corretto!' : '❌ Sbagliato!'}
-            </div>
-            {battuta && (
-              <p className="text-sm italic">{battuta}</p>
-            )}
+        {/* Result Feedback - Buchetto Style */}
+        {showResult && battuta && (
+          <div className="bg-gray-50 p-4 border border-gray-200 text-center">
+            <p className="text-sm text-black font-medium italic leading-relaxed">{battuta}</p>
           </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }

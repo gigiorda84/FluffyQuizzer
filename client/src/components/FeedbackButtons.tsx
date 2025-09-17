@@ -8,12 +8,12 @@ interface FeedbackButtonsProps {
 }
 
 const feedbackOptions = [
-  { id: 'review', emoji: '🚩', label: 'Da rivedere' },
-  { id: 'top', emoji: '👍', label: 'Mi piace' },
-  { id: 'easy', emoji: '😂', label: 'Facile' },
-  { id: 'hard', emoji: '🤯', label: 'Difficile' },
-  { id: 'fun', emoji: '🎉', label: 'Divertente' },
-  { id: 'boring', emoji: '😴', label: 'Noiosa' }
+  { id: 'review', label: 'REVIEW' },
+  { id: 'top', label: 'TOP' },
+  { id: 'easy', label: 'EASY' },
+  { id: 'hard', label: 'HARD' },
+  { id: 'fun', label: 'FUN' },
+  { id: 'boring', label: 'BORING' }
 ];
 
 export default function FeedbackButtons({ cardId, onFeedback, disabled = false }: FeedbackButtonsProps) {
@@ -27,27 +27,27 @@ export default function FeedbackButtons({ cardId, onFeedback, disabled = false }
   };
 
   return (
-    <div className="p-4 bg-card border-t">
+    <div className="bg-white border-t border-gray-200 p-4">
       <div className="max-w-md mx-auto">
-        <p className="text-center text-sm text-muted-foreground mb-4">
-          Come ti è sembrata questa carta?
-        </p>
-        
-        <div className="grid grid-cols-3 gap-3">
+        {/* Feedback buttons in horizontal row like PDF */}
+        <div className="flex justify-center gap-4">
           {feedbackOptions.map((option) => {
             const isSelected = selectedReactions.has(option.id);
             return (
               <Button
                 key={option.id}
-                variant={isSelected ? "default" : "outline"}
+                variant="ghost"
                 size="sm"
-                className="h-16 flex flex-col gap-1 text-xs"
+                className={`text-xs font-bold tracking-wide px-3 py-2 ${
+                  isSelected 
+                    ? 'bg-gray-800 text-white' 
+                    : 'text-black border border-gray-300 hover:bg-gray-100'
+                }`}
                 onClick={() => handleFeedback(option.id)}
                 disabled={disabled}
                 data-testid={`button-feedback-${option.id}`}
               >
-                <span className="text-lg">{option.emoji}</span>
-                <span>{option.label}</span>
+                {option.label}
               </Button>
             );
           })}
@@ -55,8 +55,8 @@ export default function FeedbackButtons({ cardId, onFeedback, disabled = false }
         
         {selectedReactions.size > 0 && (
           <div className="text-center mt-3">
-            <span className="text-sm text-muted-foreground">
-              Grazie per il feedback! 
+            <span className="text-xs text-gray-600">
+              Grazie per il feedback!
             </span>
           </div>
         )}
