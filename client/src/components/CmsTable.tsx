@@ -147,11 +147,52 @@ export default function CmsTable({
   };
 
   const handleUploadCsv = () => {
-    toast({
-      title: "Upload CSV",
-      description: "Funzionalità di upload CSV non ancora implementata",
-      variant: "destructive",
-    });
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('csvFile', file);
+
+      try {
+        const response = await fetch('/api/admin/import-csv', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Errore durante l\'upload');
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['cards'] });
+        toast({
+          title: "Import completato",
+          description: `${result.imported} carte importate con successo`,
+        });
+
+        if (result.errors && result.errors.length > 0) {
+          console.warn('Errori durante l\'import:', result.errors);
+          toast({
+            title: "Avviso",
+            description: `${result.errors.length} carte hanno generato errori (controlla console)`,
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error('Errore upload CSV:', error);
+        toast({
+          title: "Errore upload",
+          description: error instanceof Error ? error.message : "Errore sconosciuto",
+          variant: "destructive",
+        });
+      }
+    };
+    input.click();
   };
 
   if (isLoading) {

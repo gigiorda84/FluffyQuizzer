@@ -5,6 +5,23 @@ import { insertCardSchema, insertFeedbackSchema } from "@shared/schema";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
+import multer from "multer";
+import { parse } from "csv-parse/sync";
+
+// Configure multer for CSV file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo file CSV sono permessi'));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all cards
@@ -189,56 +206,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Import cards from CSV (DISABLED in production for security)
-  app.post("/api/admin/import-csv", async (req, res) => {
+  app.post("/api/admin/import-csv", (req, res, next) => {
+    upload.single('csvFile')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: "File troppo grande (max 5MB)" });
+        }
+        if (err.message === 'Solo file CSV sono permessi') {
+          return res.status(400).json({ error: "Solo file CSV sono permessi" });
+        }
+        return res.status(400).json({ error: "Errore upload file: " + err.message });
+      }
+      next();
+    });
+  }, async (req, res) => {
     // Security: Disable in production
     if (process.env.NODE_ENV === 'production') {
       return res.status(403).json({ error: "Import endpoint disabled in production" });
     }
+    
     try {
-      const csvPath = path.join(process.cwd(), "attached_assets", "domande_1758145253067.csv");
-      
-      if (!fs.existsSync(csvPath)) {
-        return res.status(404).json({ error: "CSV file not found" });
+      if (!req.file) {
+        return res.status(400).json({ error: "Nessun file CSV caricato" });
       }
 
-      const csvContent = fs.readFileSync(csvPath, "utf-8");
-      const lines = csvContent.split("\n").slice(1); // Skip header
+      const csvContent = req.file.buffer.toString('utf-8');
+      
+      // Parse CSV with proper quote handling
+      const records = parse(csvContent, {
+        columns: ['id', 'colore', 'categoria', 'domanda', 'opzioneA', 'opzioneB', 'opzioneC', 'corretta', 'battuta'],
+        skip_empty_lines: true,
+        from_line: 2 // Skip header
+      });
       
       let imported = 0;
       let errors = [];
       
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.trim()) continue;
+      for (let i = 0; i < records.length; i++) {
+        const record = records[i];
+        const rowNumber = i + 2; // Line number in CSV (accounting for header)
         
-        // Parse CSV line (handling quotes and commas)
-        const columns = parseCSVLine(line);
-        
-        if (columns.length < 9) {
-          continue;
-        }
-
-        const [id, colore, categoria, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta] = columns;
-        
-        const cardData = {
-          id: id.replace("#", ""), // Remove # from ID
-          categoria,
-          colore: colore.toLowerCase(),
-          domanda,
-          opzioneA: opzioneA || null,
-          opzioneB: opzioneB || null,
-          opzioneC: opzioneC || null,
-          corretta: (opzioneA && opzioneB && opzioneC) ? corretta : null,
-          battuta: battuta || null,
-          tipo: (opzioneA && opzioneB && opzioneC) ? "quiz" : "speciale"
-        };
-
         try {
-          await storage.createCard(cardData);
+          // Clean and prepare data
+          const rawCardData = {
+            id: (record.id || '').toString().replace(/^#/, '').trim(), // Remove # prefix
+            categoria: (record.categoria || '').trim(),
+            colore: (record.colore || '').toLowerCase().trim(),
+            domanda: (record.domanda || '').trim(),
+            opzioneA: record.opzioneA?.trim() || undefined,
+            opzioneB: record.opzioneB?.trim() || undefined,
+            opzioneC: record.opzioneC?.trim() || undefined,
+            corretta: record.corretta?.trim() || undefined,
+            battuta: record.battuta?.trim() || undefined,
+            tipo: (record.opzioneA && record.opzioneB && record.opzioneC) ? "quiz" : "speciale"
+          };
+
+          // Validate using schema
+          const validationResult = insertCardSchema.safeParse(rawCardData);
+          
+          if (!validationResult.success) {
+            errors.push({ 
+              row: rowNumber, 
+              id: rawCardData.id, 
+              error: `Validation failed: ${validationResult.error.errors.map(e => e.message).join(', ')}` 
+            });
+            continue;
+          }
+
+          await storage.createCard(validationResult.data);
           imported++;
         } catch (error) {
-          console.error(`Error importing card ${id}:`, error);
-          errors.push({ id, error: error.message });
+          console.error(`Error importing card at row ${rowNumber}:`, error);
+          errors.push({ 
+            row: rowNumber, 
+            id: record.id || 'unknown', 
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
         }
       }
 
@@ -257,25 +300,3 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
-// Helper function to parse CSV line with proper quote handling
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      inQuotes = !inQuotes;
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  
-  result.push(current.trim());
-  return result.map(col => col.replace(/^"(.*)"$/, '$1')); // Remove quotes
-}
