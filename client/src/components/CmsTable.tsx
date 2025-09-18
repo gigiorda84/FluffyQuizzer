@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Edit, Trash2, Download, Upload, Plus, Search, ArrowLeft } from "lucide-react";
+import { Edit, Trash2, Download, Upload, Plus, Search, ArrowLeft, RefreshCw } from "lucide-react";
 
 interface Card {
   id: string;
@@ -25,10 +26,10 @@ interface Card {
   corretta?: 'A' | 'B' | 'C';
   battuta?: string;
   tipo: 'quiz' | 'speciale';
+  createdAt: string;
 }
 
 interface CmsTableProps {
-  cards: Card[];
   onEdit: (card: Card) => void;
   onDelete: (cardId: string) => void;
   onAdd: () => void;
@@ -39,11 +40,24 @@ interface CmsTableProps {
 }
 
 export default function CmsTable({ 
-  cards, onEdit, onDelete, onAdd, onUpload, onExport, onLogout, onAnalytics 
+  onEdit, onDelete, onAdd, onUpload, onExport, onLogout, onAnalytics 
 }: CmsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+
+  // Fetch all cards from API
+  const { data: cards = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['cards'],
+    queryFn: async (): Promise<Card[]> => {
+      const response = await fetch('/api/cards');
+      if (!response.ok) {
+        throw new Error('Failed to fetch cards');
+      }
+      return response.json();
+    },
+    refetchOnWindowFocus: false,
+  });
 
   const categories = Array.from(new Set(cards.map(card => card.categoria)));
   
@@ -55,6 +69,30 @@ export default function CmsTable({
     
     return matchesSearch && matchesCategory && matchesType;
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">Caricando carte...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <h2 className="text-2xl font-bold text-destructive">😅 Errore</h2>
+          <p className="text-muted-foreground">Errore nel caricamento delle carte</p>
+          <Button onClick={() => refetch()}>Riprova</Button>
+          <Button variant="outline" onClick={onLogout}>Torna al menu</Button>
+        </div>
+      </div>
+    );
+  }
 
   const getCategoryBadgeColor = (color: string) => {
     switch (color.toLowerCase()) {

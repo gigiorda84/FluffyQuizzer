@@ -100,6 +100,7 @@ function Router() {
           <GameScreen
             selectedCategory={selectedCategory}
             onBack={() => setCurrentScreen('home')}
+            onCmsLogin={handleCmsLogin}
           />
         )}
         
@@ -112,7 +113,6 @@ function Router() {
         
         {currentScreen === 'cms-table' && isLoggedIn && (
           <CmsTable
-            cards={[]} // CMS will fetch real data from API
             onEdit={(card) => console.log('Edit card:', card)}
             onDelete={(cardId) => console.log('Delete card:', cardId)}
             onAdd={() => console.log('Add new card')}

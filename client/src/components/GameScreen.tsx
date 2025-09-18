@@ -24,9 +24,10 @@ interface Card {
 interface GameScreenProps {
   selectedCategory?: string | null;
   onBack: () => void;
+  onCmsLogin: () => void;
 }
 
-export default function GameScreen({ selectedCategory, onBack }: GameScreenProps) {
+export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: GameScreenProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For forcing re-fetch
@@ -34,7 +35,7 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
   // Fetch random card (optionally filtered by category)
   const { data: currentCard, isLoading, error, refetch } = useQuery({
     queryKey: ['cards', 'random', selectedCategory || 'all', cardKey],
-    queryFn: async () => {
+    queryFn: async (): Promise<Card> => {
       const url = selectedCategory && selectedCategory !== 'mix' 
         ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
         : '/api/cards/random';
@@ -43,10 +44,9 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
       if (!response.ok) {
         throw new Error('Failed to fetch card');
       }
-      return response.json() as Card;
+      return response.json();
     },
     enabled: selectedCategory !== null, // Prevent initial fetch when category is null
-    keepPreviousData: true, // Smoother UX during card transitions
     refetchOnWindowFocus: false,
   });
 
@@ -162,7 +162,7 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
         
         <div className="flex gap-2">
           <button
-            onClick={() => window.location.href = '/cms'}
+            onClick={onCmsLogin}
             className="text-xs font-bold border border-black px-3 py-1 rounded bg-white hover:bg-gray-100"
             data-testid="button-cms"
           >
