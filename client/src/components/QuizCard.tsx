@@ -24,6 +24,7 @@ export default function QuizCard({
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [startTime] = useState(Date.now());
+  const [clickedFeedback, setClickedFeedback] = useState<string | null>(null);
 
   const getCategoryColorClass = (color: string) => {
     switch (color.toLowerCase()) {
@@ -46,11 +47,33 @@ export default function QuizCard({
     onAnswer(option, isCorrect, timeMs);
   };
 
+  const handleFeedbackClick = (reaction: string) => {
+    setClickedFeedback(reaction);
+    onFeedback(reaction);
+    
+    // Reset visual feedback after 1 second
+    setTimeout(() => {
+      setClickedFeedback(null);
+    }, 1000);
+  };
+
   const getButtonVariant = (option: 'A' | 'B' | 'C') => {
     if (!showResult) return "outline";
     if (option === corretta) return "default";
     if (option === selectedOption && option !== corretta) return "destructive";
     return "outline";
+  };
+
+  const getFeedbackButtonClass = (reaction: string) => {
+    const baseClasses = "text-xs font-bold border border-black px-2 py-1 rounded transition-all duration-300";
+    
+    if (clickedFeedback === reaction) {
+      // Visual feedback when clicked - green background with white text
+      return `${baseClasses} bg-green-500 text-white border-green-500`;
+    }
+    
+    // Default style
+    return `${baseClasses} bg-white hover:bg-gray-100`;
   };
 
   const getButtonIcon = (option: 'A' | 'B' | 'C') => {
@@ -165,43 +188,43 @@ export default function QuizCard({
           {/* Feedback Buttons Grid - Exactly as in Canva: 2 rows x 3 cols */}
           <div className="grid grid-cols-3 gap-1 mb-4">
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('review')}
+              className={getFeedbackButtonClass('review')}
+              onClick={() => handleFeedbackClick('review')}
               data-testid="button-feedback-review"
             >
               REVIEW
             </button>
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('easy')}
+              className={getFeedbackButtonClass('easy')}
+              onClick={() => handleFeedbackClick('easy')}
               data-testid="button-feedback-easy"
             >
               EASY
             </button>
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('fun')}
+              className={getFeedbackButtonClass('fun')}
+              onClick={() => handleFeedbackClick('fun')}
               data-testid="button-feedback-fun"
             >
               FUN
             </button>
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('top')}
+              className={getFeedbackButtonClass('top')}
+              onClick={() => handleFeedbackClick('top')}
               data-testid="button-feedback-top"
             >
               TOP
             </button>
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('hard')}
+              className={getFeedbackButtonClass('hard')}
+              onClick={() => handleFeedbackClick('hard')}
               data-testid="button-feedback-hard"
             >
               HARD
             </button>
             <button
-              className="text-xs font-bold border border-black px-2 py-1 rounded bg-white hover:bg-gray-100"
-              onClick={() => onFeedback('boring')}
+              className={getFeedbackButtonClass('boring')}
+              onClick={() => handleFeedbackClick('boring')}
               data-testid="button-feedback-boring"
             >
               BORING
