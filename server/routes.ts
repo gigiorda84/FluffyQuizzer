@@ -62,6 +62,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create a new card
+  app.post("/api/cards", async (req, res) => {
+    try {
+      const cardData = insertCardSchema.parse(req.body);
+      const card = await storage.createCard(cardData);
+      res.status(201).json(card);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid card data", details: error.errors });
+      }
+      console.error("Error creating card:", error);
+      res.status(500).json({ error: "Failed to create card" });
+    }
+  });
+
+  // Update a card
+  app.put("/api/cards/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const cardData = insertCardSchema.partial().parse(req.body);
+      const updatedCard = await storage.updateCard(id, cardData);
+      
+      if (!updatedCard) {
+        return res.status(404).json({ error: "Card not found" });
+      }
+      
+      res.json(updatedCard);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid card data", details: error.errors });
+      }
+      console.error("Error updating card:", error);
+      res.status(500).json({ error: "Failed to update card" });
+    }
+  });
+
+  // Delete a card
+  app.delete("/api/cards/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCard(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Card not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting card:", error);
+      res.status(500).json({ error: "Failed to delete card" });
+    }
+  });
+
   // Create feedback
   app.post("/api/feedback", async (req, res) => {
     try {
@@ -97,6 +150,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching feedback by card:", error);
       res.status(500).json({ error: "Failed to fetch feedback by card" });
+    }
+  });
+
+  // Export cards to CSV
+  app.get("/api/admin/export-csv", async (req, res) => {
+    try {
+      const cards = await storage.getAllCards();
+      
+      // Create CSV header
+      const csvHeader = "id,colore,categoria,domanda,opzioneA,opzioneB,opzioneC,corretta,battuta\n";
+      
+      // Convert cards to CSV format
+      const csvContent = cards.map(card => {
+        const row = [
+          `#${card.id}`,
+          card.colore,
+          card.categoria,
+          `"${card.domanda.replace(/"/g, '""')}"`,
+          card.opzioneA ? `"${card.opzioneA.replace(/"/g, '""')}"` : "",
+          card.opzioneB ? `"${card.opzioneB.replace(/"/g, '""')}"` : "",
+          card.opzioneC ? `"${card.opzioneC.replace(/"/g, '""')}"` : "",
+          card.corretta || "",
+          card.battuta ? `"${card.battuta.replace(/"/g, '""')}"` : ""
+        ];
+        return row.join(",");
+      }).join("\n");
+      
+      const fullCsv = csvHeader + csvContent;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="fluffy-trivia-cards.csv"');
+      res.send(fullCsv);
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      res.status(500).json({ error: "Failed to export CSV" });
     }
   });
 

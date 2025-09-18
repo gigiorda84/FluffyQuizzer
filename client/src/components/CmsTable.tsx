@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,20 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Edit, Trash2, Download, Upload, Plus, Search, ArrowLeft, RefreshCw } from "lucide-react";
+import CardForm from "./CardForm";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Card {
   id: string;
@@ -30,21 +43,23 @@ interface Card {
 }
 
 interface CmsTableProps {
-  onEdit: (card: Card) => void;
-  onDelete: (cardId: string) => void;
-  onAdd: () => void;
-  onUpload: () => void;
-  onExport: () => void;
   onLogout: () => void;
   onAnalytics?: () => void;
 }
 
 export default function CmsTable({ 
-  onEdit, onDelete, onAdd, onUpload, onExport, onLogout, onAnalytics 
+  onLogout, onAnalytics 
 }: CmsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [showCardForm, setShowCardForm] = useState(false);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [deleteCardId, setDeleteCardId] = useState<string | null>(null);
+  
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch all cards from API
   const { data: cards = [], isLoading, error, refetch } = useQuery({
@@ -59,6 +74,29 @@ export default function CmsTable({
     refetchOnWindowFocus: false,
   });
 
+  // Delete mutation - MUST be before any conditional returns
+  const deleteMutation = useMutation({
+    mutationFn: async (cardId: string) => {
+      return apiRequest('DELETE', `/api/cards/${cardId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      toast({
+        title: "Carta eliminata",
+        description: "La carta è stata eliminata con successo",
+      });
+      setDeleteCardId(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: "Errore nell'eliminazione della carta: " + error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Data processing
   const categories = Array.from(new Set(cards.map(card => card.categoria)));
   
   const filteredCards = cards.filter(card => {
@@ -69,6 +107,52 @@ export default function CmsTable({
     
     return matchesSearch && matchesCategory && matchesType;
   });
+
+  // Handler functions
+  const handleAddCard = () => {
+    setSelectedCard(null);
+    setFormMode('create');
+    setShowCardForm(true);
+  };
+
+  const handleEditCard = (card: Card) => {
+    setSelectedCard(card);
+    setFormMode('edit');
+    setShowCardForm(true);
+  };
+
+  const handleDeleteCard = (cardId: string) => {
+    setDeleteCardId(cardId);
+  };
+
+  const confirmDelete = () => {
+    if (deleteCardId) {
+      deleteMutation.mutate(deleteCardId);
+    }
+  };
+
+  const handleExportCsv = () => {
+    // Create download link for CSV export
+    const link = document.createElement('a');
+    link.href = '/api/admin/export-csv';
+    link.download = 'fluffy-trivia-cards.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export avviato",
+      description: "Il download del file CSV dovrebbe iniziare a breve",
+    });
+  };
+
+  const handleUploadCsv = () => {
+    toast({
+      title: "Upload CSV",
+      description: "Funzionalità di upload CSV non ancora implementata",
+      variant: "destructive",
+    });
+  };
 
   if (isLoading) {
     return (
@@ -104,6 +188,7 @@ export default function CmsTable({
     }
   };
 
+
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -124,15 +209,15 @@ export default function CmsTable({
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex gap-2">
-                <Button onClick={onAdd} data-testid="button-add-card">
+                <Button onClick={handleAddCard} data-testid="button-add-card">
                   <Plus className="w-4 h-4 mr-2" />
                   Nuova Carta
                 </Button>
-                <Button variant="outline" onClick={onUpload} data-testid="button-upload-csv">
+                <Button variant="outline" onClick={handleUploadCsv} data-testid="button-upload-csv">
                   <Upload className="w-4 h-4 mr-2" />
                   Carica CSV
                 </Button>
-                <Button variant="outline" onClick={onExport} data-testid="button-export-csv">
+                <Button variant="outline" onClick={handleExportCsv} data-testid="button-export-csv">
                   <Download className="w-4 h-4 mr-2" />
                   Esporta CSV
                 </Button>
@@ -250,7 +335,7 @@ export default function CmsTable({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onEdit(card)}
+                            onClick={() => handleEditCard(card)}
                             data-testid={`button-edit-${card.id}`}
                           >
                             <Edit className="w-4 h-4" />
@@ -258,7 +343,7 @@ export default function CmsTable({
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => onDelete(card.id)}
+                            onClick={() => handleDeleteCard(card.id)}
                             data-testid={`button-delete-${card.id}`}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -273,6 +358,36 @@ export default function CmsTable({
           </CardContent>
         </Card>
       </div>
+
+      {/* Card Form Dialog */}
+      <CardForm
+        card={selectedCard}
+        isOpen={showCardForm}
+        onClose={() => setShowCardForm(false)}
+        mode={formMode}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteCardId !== null} onOpenChange={() => setDeleteCardId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sei sicuro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Questa azione non può essere annullata. La carta verrà eliminata permanentemente dal database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? 'Eliminando...' : 'Elimina'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

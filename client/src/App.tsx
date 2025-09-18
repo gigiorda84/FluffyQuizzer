@@ -113,11 +113,6 @@ function Router() {
         
         {currentScreen === 'cms-table' && isLoggedIn && (
           <CmsTable
-            onEdit={(card) => console.log('Edit card:', card)}
-            onDelete={(cardId) => console.log('Delete card:', cardId)}
-            onAdd={() => console.log('Add new card')}
-            onUpload={() => console.log('Upload CSV')}
-            onExport={() => console.log('Export CSV')}
             onLogout={handleLogout}
             onAnalytics={() => setCurrentScreen('analytics')}
           />
