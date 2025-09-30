@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Edit, Trash2, Download, Upload, Plus, Search, ArrowLeft, RefreshCw } from "lucide-react";
+import { Edit, Trash2, Download, Upload, Plus, Search, ArrowLeft, RefreshCw, EyeOff, Eye } from "lucide-react";
 import CardForm from "./CardForm";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -40,6 +40,8 @@ interface Card {
   corretta?: 'A' | 'B' | 'C';
   battuta?: string;
   tipo: 'quiz' | 'speciale';
+  hidden: boolean;
+  numeroCarte: number;
   createdAt: string;
 }
 
@@ -122,6 +124,50 @@ export default function CmsTable({
     }
   });
 
+  // Mass hide mutation
+  const massHideMutation = useMutation({
+    mutationFn: async (cardIds: string[]) => {
+      return apiRequest('PUT', '/api/cards/batch/hide', { cardIds });
+    },
+    onSuccess: (_, hiddenIds) => {
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      toast({
+        title: "Carte nascoste",
+        description: `${hiddenIds.length} carte sono state nascoste dal gioco`,
+      });
+      setSelectedCardIds(new Set());
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: "Errore nel nascondere le carte: " + error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mass show mutation
+  const massShowMutation = useMutation({
+    mutationFn: async (cardIds: string[]) => {
+      return apiRequest('PUT', '/api/cards/batch/show', { cardIds });
+    },
+    onSuccess: (_, shownIds) => {
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      toast({
+        title: "Carte mostrate",
+        description: `${shownIds.length} carte sono state rese visibili nel gioco`,
+      });
+      setSelectedCardIds(new Set());
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: "Errore nel mostrare le carte: " + error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Data processing
   const categories = Array.from(new Set(cards.map(card => card.categoria)));
   
@@ -142,6 +188,8 @@ export default function CmsTable({
   };
 
   const handleEditCard = (card: Card) => {
+    console.log('handleEditCard called with card:', card);
+    console.log('Card numeroCarte:', card.numeroCarte, 'type:', typeof card.numeroCarte);
     setSelectedCard(card);
     setFormMode('edit');
     setShowCardForm(true);
@@ -185,6 +233,20 @@ export default function CmsTable({
   const confirmMassDelete = () => {
     const cardIds = Array.from(selectedCardIds);
     massDeleteMutation.mutate(cardIds);
+  };
+
+  const handleMassHide = () => {
+    if (selectedCardIds.size > 0) {
+      const cardIds = Array.from(selectedCardIds);
+      massHideMutation.mutate(cardIds);
+    }
+  };
+
+  const handleMassShow = () => {
+    if (selectedCardIds.size > 0) {
+      const cardIds = Array.from(selectedCardIds);
+      massShowMutation.mutate(cardIds);
+    }
   };
 
   // Check if all visible cards are selected
@@ -325,6 +387,24 @@ export default function CmsTable({
                     </Button>
                     <Button
                       variant="outline"
+                      onClick={handleMassHide}
+                      disabled={massHideMutation.isPending}
+                      data-testid="button-mass-hide"
+                    >
+                      <EyeOff className="w-4 h-4 mr-2" />
+                      {massHideMutation.isPending ? 'Nascondendo...' : `Nascondi ${selectedCardIds.size} carte`}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleMassShow}
+                      disabled={massShowMutation.isPending}
+                      data-testid="button-mass-show"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      {massShowMutation.isPending ? 'Mostrando...' : `Mostra ${selectedCardIds.size} carte`}
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={() => setSelectedCardIds(new Set())}
                       data-testid="button-clear-selection"
                     >
@@ -455,27 +535,40 @@ export default function CmsTable({
                 </TableHeader>
                 <TableBody>
                   {filteredCards.map((card) => (
-                    <TableRow key={card.id}>
+                    <TableRow key={card.id} className={card.hidden ? "opacity-60 bg-gray-100 dark:bg-gray-800" : ""}>
                       <TableCell>
-                        <Checkbox
-                          checked={selectedCardIds.has(card.id)}
-                          onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
-                          aria-label={`Seleziona carta ${card.id}`}
-                          data-testid={`checkbox-card-${card.id}`}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedCardIds.has(card.id)}
+                            onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
+                            aria-label={`Seleziona carta ${card.id}`}
+                            data-testid={`checkbox-card-${card.id}`}
+                          />
+                          {card.hidden && (
+                            <EyeOff className="w-4 h-4 text-gray-500" />
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="font-mono">{card.id}</TableCell>
+                      <TableCell className={`font-mono ${card.hidden ? 'text-gray-500' : ''}`}>{card.id}</TableCell>
                       <TableCell>
-                        <Badge className={getCategoryBadgeColor(card.colore)}>
+                        <Badge className={card.hidden ? "bg-gray-400 text-gray-700" : getCategoryBadgeColor(card.colore)}>
                           {card.categoria}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={card.tipo === 'quiz' ? 'default' : 'secondary'}>
-                          {card.tipo}
-                        </Badge>
+                        <div className="flex gap-2 items-center">
+                          <Badge variant={card.hidden ? 'secondary' : (card.tipo === 'quiz' ? 'default' : 'secondary')}>
+                            {card.tipo}
+                          </Badge>
+                          {card.hidden && (
+                            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+                              <EyeOff className="w-3 h-3 mr-1" />
+                              NASCOSTA
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate" title={card.domanda}>
+                      <TableCell className={`max-w-xs truncate ${card.hidden ? 'text-gray-500' : ''}`} title={card.domanda}>
                         {card.domanda}
                       </TableCell>
                       <TableCell>

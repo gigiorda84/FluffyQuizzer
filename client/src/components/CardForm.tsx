@@ -23,6 +23,7 @@ interface Card {
   corretta?: 'A' | 'B' | 'C';
   battuta?: string;
   tipo: 'quiz' | 'speciale';
+  numeroCarte: number;
   createdAt: string;
 }
 
@@ -34,9 +35,10 @@ const cardFormSchema = z.object({
   opzioneA: z.string().optional(),
   opzioneB: z.string().optional(),
   opzioneC: z.string().optional(),
-  corretta: z.enum(['A', 'B', 'C']).optional(),
+  corretta: z.enum(['A', 'B', 'C']).nullable().optional(),
   battuta: z.string().optional(),
-  tipo: z.enum(['quiz', 'speciale'])
+  tipo: z.enum(['quiz', 'speciale']),
+  numeroCarte: z.number().min(1, "Numero di carte deve essere almeno 1").max(10, "Numero di carte non può superare 10")
 });
 
 type CardFormData = z.infer<typeof cardFormSchema>;
@@ -64,7 +66,8 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
       opzioneC: "",
       corretta: undefined,
       battuta: "",
-      tipo: "quiz"
+      tipo: "quiz",
+      numeroCarte: 1
     }
   });
 
@@ -72,8 +75,10 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
 
   // Reset form when card changes
   useEffect(() => {
+    console.log('useEffect triggered - card data:', card);
     if (card) {
-      form.reset({
+      console.log('Card numeroCarte from props:', card.numeroCarte);
+      const resetData = {
         id: card.id,
         categoria: card.categoria,
         colore: card.colore,
@@ -83,8 +88,11 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
         opzioneC: card.opzioneC || "",
         corretta: card.corretta,
         battuta: card.battuta || "",
-        tipo: card.tipo
-      });
+        tipo: card.tipo,
+        numeroCarte: card.numeroCarte || 1
+      };
+      console.log('Resetting form with data:', resetData);
+      form.reset(resetData);
       setIsQuizCard(card.tipo === 'quiz');
     } else {
       form.reset({
@@ -146,13 +154,27 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
   });
 
   const onSubmit = (data: CardFormData) => {
+    console.log('onSubmit called with data:', data);
+    console.log('Card type:', data.tipo);
+    console.log('numeroCarte before cleanup:', data.numeroCarte);
+
     // Clean up data based on card type
     if (data.tipo === 'speciale') {
       data.opzioneA = undefined;
       data.opzioneB = undefined;
       data.opzioneC = undefined;
-      data.corretta = undefined;
+      data.corretta = null;
+      // Ensure numeroCarte has a value for special cards
+      if (!data.numeroCarte) {
+        data.numeroCarte = 1;
+      }
+    } else {
+      // For quiz cards, always set numeroCarte to 1
+      data.numeroCarte = 1;
     }
+
+    console.log('numeroCarte after cleanup:', data.numeroCarte);
+    console.log('Final data being sent:', data);
 
     if (mode === 'create') {
       createMutation.mutate(data);
@@ -162,10 +184,11 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
   };
 
   const watchTipo = form.watch("tipo");
-  
+
   useEffect(() => {
     setIsQuizCard(watchTipo === 'quiz');
   }, [watchTipo]);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -373,33 +396,65 @@ export default function CardForm({ card, isOpen, onClose, mode }: CardFormProps)
                   />
                 </div>
 
-                <FormField
-                  control={form.control}
-                  name="battuta"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Battuta/Spiegazione</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          {...field} 
-                          placeholder="Inserisci la battuta o spiegazione..."
-                          className="min-h-[80px]"
-                          data-testid="textarea-punchline"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               </>
+            )}
+
+            <FormField
+              control={form.control}
+              name="battuta"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Battuta/Spiegazione</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="Inserisci la battuta o spiegazione..."
+                      className="min-h-[80px]"
+                      data-testid="textarea-punchline"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {!isQuizCard && (
+              <FormField
+                control={form.control}
+                name="numeroCarte"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Numero di carte</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={field.value || 1}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          field.onChange(value);
+                          form.trigger("numeroCarte");
+                        }}
+                        placeholder="1"
+                        data-testid="input-numero-carte"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                    <p className="text-sm text-muted-foreground">
+                      Aumenta la probabilità che questa carta appaia nel gioco (1-10)
+                    </p>
+                  </FormItem>
+                )}
+              />
             )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Annulla
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
                 data-testid="button-save-card"
               >

@@ -10,7 +10,7 @@ import {
   feedback
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, and } from "drizzle-orm";
 
 // Storage interface for Fluffy Trivia
 export interface IStorage {
@@ -28,6 +28,8 @@ export interface IStorage {
   updateCard(id: string, card: Partial<InsertCard>): Promise<Card | undefined>;
   deleteCard(id: string): Promise<boolean>;
   deleteMultipleCards(ids: string[]): Promise<number>;
+  hideMultipleCards(ids: string[]): Promise<number>;
+  showMultipleCards(ids: string[]): Promise<number>;
   
   // Feedback methods
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
@@ -69,14 +71,33 @@ export class DatabaseStorage implements IStorage {
 
   async getRandomCard(categoria?: string): Promise<Card | undefined> {
     let query = db.select().from(cards);
-    
+
+    // Always filter out hidden cards from the game
     if (categoria) {
-      query = query.where(eq(cards.categoria, categoria));
+      query = query.where(and(eq(cards.categoria, categoria), eq(cards.hidden, false)));
+    } else {
+      query = query.where(eq(cards.hidden, false));
     }
-    
-    // Use database-level random selection for better performance
-    const [randomCard] = await query.orderBy(sql`RANDOM()`).limit(1);
-    return randomCard || undefined;
+
+    // Get all eligible cards
+    const eligibleCards = await query;
+
+    if (eligibleCards.length === 0) {
+      return undefined;
+    }
+
+    // Create a weighted pool based on numeroCarte
+    const weightedPool: Card[] = [];
+    for (const card of eligibleCards) {
+      // Add the card numeroCarte times to simulate multiple instances
+      for (let i = 0; i < (card.numeroCarte || 1); i++) {
+        weightedPool.push(card);
+      }
+    }
+
+    // Select random card from weighted pool
+    const randomIndex = Math.floor(Math.random() * weightedPool.length);
+    return weightedPool[randomIndex];
   }
 
   async getCard(id: string): Promise<Card | undefined> {
@@ -110,6 +131,26 @@ export class DatabaseStorage implements IStorage {
     if (ids.length === 0) return 0;
 
     const result = await db.delete(cards).where(inArray(cards.id, ids));
+    return result.rowCount || 0;
+  }
+
+  async hideMultipleCards(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+
+    const result = await db
+      .update(cards)
+      .set({ hidden: true })
+      .where(inArray(cards.id, ids));
+    return result.rowCount || 0;
+  }
+
+  async showMultipleCards(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+
+    const result = await db
+      .update(cards)
+      .set({ hidden: false })
+      .where(inArray(cards.id, ids));
     return result.rowCount || 0;
   }
 

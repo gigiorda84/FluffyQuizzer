@@ -18,6 +18,7 @@ interface Card {
   corretta?: 'A' | 'B' | 'C';
   battuta?: string;
   tipo: 'quiz' | 'speciale';
+  numeroCarte: number;
   createdAt: string;
 }
 
@@ -149,28 +150,6 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back">
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Menu
-        </Button>
-        
-        <div className="text-sm text-muted-foreground">
-          Carta #{currentCard.id}
-        </div>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={onCmsLogin}
-            className="text-xs font-bold border border-black px-3 py-1 rounded bg-white hover:bg-gray-100"
-            data-testid="button-cms"
-          >
-            CMS
-          </button>
-        </div>
-      </div>
-
       {/* Card Content */}
       <div className="flex-1 flex flex-col">
         {currentCard.tipo === 'quiz' ? (
@@ -187,30 +166,19 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
             onAnswer={handleAnswer}
             onFeedback={handleFeedbackReaction}
             onNext={handleNext}
+            onBack={onBack}
           />
         ) : (
           <SpecialCard
             id={currentCard.id}
             categoria={currentCard.categoria}
-            domanda={currentCard.domanda}
-            onNext={handleSpecialNext}
+            titolo={currentCard.domanda}
+            descrizione={currentCard.battuta || "Carta speciale senza descrizione"}
+            onNext={handleNext}
             onFeedback={handleFeedbackReaction}
-            onNextCard={handleNext}
+            onBack={onBack}
           />
         )}
-      </div>
-
-      {/* Bottom Action Bar - Always visible "Nuova Domanda" button */}
-      <div className="bg-white border-t p-4">
-        <div className="max-w-md mx-auto">
-          <button
-            onClick={handleNext}
-            className="w-full bg-fluffy-blu text-white font-bold py-3 px-6 rounded-lg hover:opacity-90 transition-opacity"
-            data-testid="button-new-question"
-          >
-            NUOVA DOMANDA
-          </button>
-        </div>
       </div>
 
     </div>

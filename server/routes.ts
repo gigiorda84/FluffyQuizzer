@@ -28,6 +28,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/cards", async (req, res) => {
     try {
       const cards = await storage.getAllCards();
+      console.log('GET /api/cards - First card sample:', cards[0]);
+      console.log('First card numeroCarte:', cards[0]?.numeroCarte, 'type:', typeof cards[0]?.numeroCarte);
       res.json(cards);
     } catch (error) {
       console.error("Error fetching cards:", error);
@@ -98,13 +100,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/cards/:id", async (req, res) => {
     try {
       const { id } = req.params;
+      console.log(`PUT /api/cards/${id} - Received data:`, req.body);
+      console.log('numeroCarte in request:', req.body.numeroCarte, 'type:', typeof req.body.numeroCarte);
+
       const cardData = insertCardSchema.partial().parse(req.body);
+      console.log('Parsed card data:', cardData);
+      console.log('numeroCarte after parsing:', cardData.numeroCarte, 'type:', typeof cardData.numeroCarte);
+
       const updatedCard = await storage.updateCard(id, cardData);
-      
+      console.log('Updated card from database:', updatedCard);
+
       if (!updatedCard) {
         return res.status(404).json({ error: "Card not found" });
       }
-      
+
       res.json(updatedCard);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -133,6 +142,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error batch deleting cards:", error);
       res.status(500).json({ error: "Failed to batch delete cards" });
+    }
+  });
+
+  // Batch hide cards
+  app.put("/api/cards/batch/hide", async (req, res) => {
+    try {
+      const { cardIds } = req.body;
+
+      if (!Array.isArray(cardIds) || cardIds.length === 0) {
+        return res.status(400).json({ error: "cardIds must be a non-empty array" });
+      }
+
+      const hiddenCount = await storage.hideMultipleCards(cardIds);
+
+      res.json({
+        message: `Successfully hidden ${hiddenCount} cards`,
+        hiddenCount
+      });
+    } catch (error) {
+      console.error("Error batch hiding cards:", error);
+      res.status(500).json({ error: "Failed to batch hide cards" });
+    }
+  });
+
+  // Batch show cards
+  app.put("/api/cards/batch/show", async (req, res) => {
+    try {
+      const { cardIds } = req.body;
+
+      if (!Array.isArray(cardIds) || cardIds.length === 0) {
+        return res.status(400).json({ error: "cardIds must be a non-empty array" });
+      }
+
+      const shownCount = await storage.showMultipleCards(cardIds);
+
+      res.json({
+        message: `Successfully shown ${shownCount} cards`,
+        shownCount
+      });
+    } catch (error) {
+      console.error("Error batch showing cards:", error);
+      res.status(500).json({ error: "Failed to batch show cards" });
     }
   });
 

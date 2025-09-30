@@ -17,11 +17,13 @@ export const cards = pgTable("cards", {
   colore: text("colore").notNull(),
   domanda: text("domanda").notNull(),
   opzioneA: text("opzione_a"),
-  opzioneB: text("opzione_b"), 
+  opzioneB: text("opzione_b"),
   opzioneC: text("opzione_c"),
   corretta: text("corretta"), // 'A', 'B', 'C' or null
   battuta: text("battuta"),
   tipo: text("tipo").notNull(), // 'quiz' or 'speciale'
+  hidden: boolean("hidden").notNull().default(false), // hide card from game
+  numeroCarte: integer("numero_carte").notNull().default(1), // weight for random selection
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -1,3 +1,6 @@
+
+import { useState } from "react";
+
 interface SpecialCardProps {
   id: string;
   categoria: string;
@@ -9,6 +12,31 @@ interface SpecialCardProps {
 }
 
 export default function SpecialCard({ id, categoria, titolo, descrizione, onFeedback, onNext, onBack }: SpecialCardProps) {
+  const [selectedFeedback, setSelectedFeedback] = useState<Set<string>>(new Set());
+
+  const handleFeedbackClick = (reaction: string) => {
+    setSelectedFeedback(prev => {
+      const newSelected = new Set(prev);
+
+      // Handle mutual exclusivity for FUN/BORING
+      if (reaction === 'fun' && newSelected.has('boring')) {
+        newSelected.delete('boring');
+      } else if (reaction === 'boring' && newSelected.has('fun')) {
+        newSelected.delete('fun');
+      }
+
+      // Toggle the clicked reaction
+      if (newSelected.has(reaction)) {
+        newSelected.delete(reaction);
+      } else {
+        newSelected.add(reaction);
+      }
+
+      return newSelected;
+    });
+
+    onFeedback(reaction);
+  };
   return (
     <div className="min-h-screen bg-gray-900">
       <div className="w-full bg-gray-100 min-h-screen flex flex-col">
@@ -66,15 +94,23 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
             {/* Column 1: REVIEW/TOP */}
             <div className="flex flex-col gap-3">
               <button
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-all uppercase tracking-wider"
-                onClick={() => onFeedback('review')}
+                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
+                  selectedFeedback.has('review')
+                    ? 'bg-white text-black'
+                    : 'bg-transparent text-white hover:bg-white hover:text-black'
+                }`}
+                onClick={() => handleFeedbackClick('review')}
                 data-testid="button-feedback-review"
               >
                 REVIEW
               </button>
               <button
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-all uppercase tracking-wider"
-                onClick={() => onFeedback('top')}
+                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
+                  selectedFeedback.has('top')
+                    ? 'bg-white text-black'
+                    : 'bg-transparent text-white hover:bg-white hover:text-black'
+                }`}
+                onClick={() => handleFeedbackClick('top')}
                 data-testid="button-feedback-top"
               >
                 TOP
@@ -84,34 +120,29 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
             {/* Column 2: FUN/BORING */}
             <div className="flex flex-col gap-3">
               <button
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-all uppercase tracking-wider"
-                onClick={() => onFeedback('fun')}
+                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
+                  selectedFeedback.has('fun')
+                    ? 'bg-white text-black'
+                    : 'bg-transparent text-white hover:bg-white hover:text-black'
+                }`}
+                onClick={() => handleFeedbackClick('fun')}
                 data-testid="button-feedback-fun"
               >
                 FUN
               </button>
               <button
-                className="bg-transparent border-2 border-white text-white font-bold py-3 px-6 rounded-lg hover:bg-white hover:text-black transition-all uppercase tracking-wider"
-                onClick={() => onFeedback('boring')}
+                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
+                  selectedFeedback.has('boring')
+                    ? 'bg-white text-black'
+                    : 'bg-transparent text-white hover:bg-white hover:text-black'
+                }`}
+                onClick={() => handleFeedbackClick('boring')}
                 data-testid="button-feedback-boring"
               >
                 BORING
               </button>
             </div>
           </div>
-
-          {/* Next Button */}
-          {onNext && (
-            <div className="flex justify-center mt-6">
-              <button
-                onClick={onNext}
-                className="bg-white text-black font-bold py-3 px-8 rounded-lg hover:bg-gray-100 transition-all uppercase tracking-wider"
-                data-testid="button-next-card"
-              >
-                AVANTI
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

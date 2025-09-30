@@ -1,0 +1,343 @@
+import React, { useState, useEffect } from 'react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line
+} from 'recharts';
+import {
+  TrendingUp, Users, MessageSquare, Target, Brain,
+  ThumbsUp, ThumbsDown, Flag, XCircle, RefreshCw, Trash2
+} from 'lucide-react';
+
+interface AnalyticsProps {
+  onBack?: () => void;
+}
+
+interface Card {
+  id: string;
+  categoria: string;
+  domanda: string;
+  tipo: string;
+}
+
+interface Feedback {
+  id: string;
+  cardId: string;
+  deviceId: string;
+  reaction: string;
+  correct?: boolean;
+  timeMs?: number;
+  createdAt: string;
+}
+
+interface Stats {
+  totalCards: number;
+  totalAnswers: number;
+  totalFeedback: number;
+  correctAnswers: number;
+  avgResponseTime: number;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+export default function Analytics({ onBack }: AnalyticsProps) {
+  const [cards, setCards] = useState<Card[]>([]);
+  const [feedback, setFeedback] = useState<Feedback[]>([]);
+  const [stats, setStats] = useState<Stats>({
+    totalCards: 0,
+    totalAnswers: 0,
+    totalFeedback: 0,
+    correctAnswers: 0,
+    avgResponseTime: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [cardsResponse, feedbackResponse] = await Promise.all([
+        fetch('/api/cards'),
+        fetch('/api/feedback')
+      ]);
+
+      const cardsData = await cardsResponse.json();
+      const feedbackData = await feedbackResponse.json();
+
+      setCards(cardsData);
+      setFeedback(feedbackData);
+
+      // Calculate stats
+      const answers = feedbackData.filter((f: Feedback) => f.reaction === 'answered');
+      const correctAnswers = answers.filter((f: Feedback) => f.correct === true);
+      const responseTimes = answers.filter((f: Feedback) => f.timeMs).map((f: Feedback) => f.timeMs!);
+      const avgResponseTime = responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
+        : 0;
+
+      setStats({
+        totalCards: cardsData.length,
+        totalAnswers: answers.length,
+        totalFeedback: feedbackData.length,
+        correctAnswers: correctAnswers.length,
+        avgResponseTime: Math.round(avgResponseTime / 1000) // Convert to seconds
+      });
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAllFeedback = async () => {
+    if (deleteConfirmText !== 'elimina') return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch('/api/feedback/delete-all', {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        setFeedback([]);
+        setStats(prev => ({
+          ...prev,
+          totalAnswers: 0,
+          totalFeedback: 0,
+          correctAnswers: 0,
+          avgResponseTime: 0
+        }));
+        setDeleteConfirmText('');
+        alert('Tutti i dati sono stati eliminati con successo!');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      alert('Errore durante l\'eliminazione dei dati');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Category distribution
+  const categoryData = cards.reduce((acc: any[], card) => {
+    const existing = acc.find(item => item.name === card.categoria);
+    if (existing) {
+      existing.value += 1;
+    } else {
+      acc.push({ name: card.categoria, value: 1 });
+    }
+    return acc;
+  }, []);
+
+  // Feedback reactions data
+  const reactionData = [
+    { name: 'Review', value: feedback.filter(f => f.reaction === 'review').length, color: '#ef4444' },
+    { name: 'Top', value: feedback.filter(f => f.reaction === 'top').length, color: '#eab308' },
+    { name: 'Fun', value: feedback.filter(f => f.reaction === 'fun').length, color: '#3b82f6' },
+    { name: 'Easy', value: feedback.filter(f => f.reaction === 'easy').length, color: '#22c55e' },
+    { name: 'Hard', value: feedback.filter(f => f.reaction === 'hard').length, color: '#ef4444' },
+    { name: 'Boring', value: feedback.filter(f => f.reaction === 'boring').length, color: '#6b7280' }
+  ].filter(item => item.value > 0);
+
+  // Response time distribution
+  const responseTimeData = feedback
+    .filter(f => f.timeMs && f.reaction === 'answered')
+    .map(f => ({
+      time: Math.round(f.timeMs! / 1000),
+      correct: f.correct
+    }))
+    .sort((a, b) => a.time - b.time)
+    .slice(0, 50); // Show last 50 responses
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+          <p className="text-gray-600">Caricamento analytics...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Back to CMS
+            </button>
+          )}
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Target className="w-8 h-8 text-blue-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Cards</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalCards}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Users className="w-8 h-8 text-green-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Answers</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalAnswers}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <MessageSquare className="w-8 h-8 text-purple-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Feedback</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalFeedback}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <Brain className="w-8 h-8 text-orange-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Correct %</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalAnswers > 0 ? Math.round((stats.correctAnswers / stats.totalAnswers) * 100) : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <TrendingUp className="w-8 h-8 text-red-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Avg Time</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.avgResponseTime}s</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Category Distribution */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Category Distribution</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Feedback Reactions */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold mb-4">Feedback Reactions</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={reactionData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Response Time Chart */}
+        {responseTimeData.length > 0 && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h3 className="text-lg font-semibold mb-4">Response Times (Last 50 Answers)</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={responseTimeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip
+                  formatter={(value, name) => [`${value}s`, 'Response Time']}
+                  labelFormatter={(value) => `Answer #${value}`}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="time"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                  dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Delete All Data Section */}
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <Trash2 className="w-5 h-5 text-red-500 mr-2" />
+            <h3 className="text-lg font-semibold text-red-800">Danger Zone</h3>
+          </div>
+          <p className="text-red-700 mb-4">
+            Permanently delete all feedback and response data. This action cannot be undone.
+          </p>
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="Type 'elimina' to confirm"
+              className="px-3 py-2 border border-red-300 rounded-md"
+            />
+            <button
+              onClick={handleDeleteAllFeedback}
+              disabled={deleteConfirmText !== 'elimina' || isDeleting}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            >
+              {isDeleting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete All Data
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
