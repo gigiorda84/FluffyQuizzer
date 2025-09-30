@@ -115,16 +115,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch delete cards (must come before single delete route)
+  app.delete("/api/cards/batch", async (req, res) => {
+    try {
+      const { cardIds } = req.body;
+
+      if (!Array.isArray(cardIds) || cardIds.length === 0) {
+        return res.status(400).json({ error: "cardIds must be a non-empty array" });
+      }
+
+      const deletedCount = await storage.deleteMultipleCards(cardIds);
+
+      res.json({
+        message: `Successfully deleted ${deletedCount} cards`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error("Error batch deleting cards:", error);
+      res.status(500).json({ error: "Failed to batch delete cards" });
+    }
+  });
+
   // Delete a card
   app.delete("/api/cards/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteCard(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ error: "Card not found" });
       }
-      
+
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting card:", error);
@@ -167,6 +188,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching feedback by card:", error);
       res.status(500).json({ error: "Failed to fetch feedback by card" });
+    }
+  });
+
+  // Delete all feedback (Admin only)
+  app.delete("/api/feedback/delete-all", async (req, res) => {
+    try {
+      const deletedCount = await storage.deleteAllFeedback();
+      res.json({
+        message: `Successfully deleted ${deletedCount} feedback entries`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error("Error deleting all feedback:", error);
+      res.status(500).json({ error: "Failed to delete all feedback" });
     }
   });
 

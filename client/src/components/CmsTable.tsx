@@ -5,15 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from "@/components/ui/table";
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -47,8 +48,8 @@ interface CmsTableProps {
   onAnalytics?: () => void;
 }
 
-export default function CmsTable({ 
-  onLogout, onAnalytics 
+export default function CmsTable({
+  onLogout, onAnalytics
 }: CmsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -57,6 +58,8 @@ export default function CmsTable({
   const [showCardForm, setShowCardForm] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [deleteCardId, setDeleteCardId] = useState<string | null>(null);
+  const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
+  const [showMassDeleteDialog, setShowMassDeleteDialog] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -96,6 +99,29 @@ export default function CmsTable({
     }
   });
 
+  // Mass delete mutation
+  const massDeleteMutation = useMutation({
+    mutationFn: async (cardIds: string[]) => {
+      return apiRequest('DELETE', '/api/cards/batch', { cardIds });
+    },
+    onSuccess: (_, deletedIds) => {
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      toast({
+        title: "Carte eliminate",
+        description: `${deletedIds.length} carte sono state eliminate con successo`,
+      });
+      setSelectedCardIds(new Set());
+      setShowMassDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: "Errore nell'eliminazione delle carte: " + error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Data processing
   const categories = Array.from(new Set(cards.map(card => card.categoria)));
   
@@ -130,6 +156,43 @@ export default function CmsTable({
       deleteMutation.mutate(deleteCardId);
     }
   };
+
+  // Selection handlers
+  const handleSelectCard = (cardId: string, checked: boolean) => {
+    const newSelected = new Set(selectedCardIds);
+    if (checked) {
+      newSelected.add(cardId);
+    } else {
+      newSelected.delete(cardId);
+    }
+    setSelectedCardIds(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedCardIds(new Set(filteredCards.map(card => card.id)));
+    } else {
+      setSelectedCardIds(new Set());
+    }
+  };
+
+  const handleMassDelete = () => {
+    if (selectedCardIds.size > 0) {
+      setShowMassDeleteDialog(true);
+    }
+  };
+
+  const confirmMassDelete = () => {
+    const cardIds = Array.from(selectedCardIds);
+    massDeleteMutation.mutate(cardIds);
+  };
+
+  // Check if all visible cards are selected
+  const allVisibleSelected = filteredCards.length > 0 &&
+    filteredCards.every(card => selectedCardIds.has(card.id));
+
+  // Check if some (but not all) visible cards are selected
+  const someVisibleSelected = filteredCards.some(card => selectedCardIds.has(card.id));
 
   const handleExportCsv = () => {
     // Create download link for CSV export
@@ -250,27 +313,57 @@ export default function CmsTable({
           <CardContent className="p-4">
             <div className="flex flex-wrap gap-4 items-center justify-between">
               <div className="flex gap-2">
-                <Button onClick={handleAddCard} data-testid="button-add-card">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nuova Carta
-                </Button>
-                <Button variant="outline" onClick={handleUploadCsv} data-testid="button-upload-csv">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Carica CSV
-                </Button>
-                <Button variant="outline" onClick={handleExportCsv} data-testid="button-export-csv">
-                  <Download className="w-4 h-4 mr-2" />
-                  Esporta CSV
-                </Button>
-                {onAnalytics && (
-                  <Button variant="outline" onClick={onAnalytics} data-testid="button-analytics">
-                    📊 Analytics
-                  </Button>
+                {selectedCardIds.size > 0 ? (
+                  <>
+                    <Button
+                      variant="destructive"
+                      onClick={handleMassDelete}
+                      data-testid="button-mass-delete"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Elimina {selectedCardIds.size} carte
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedCardIds(new Set())}
+                      data-testid="button-clear-selection"
+                    >
+                      Deseleziona tutto
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={handleAddCard} data-testid="button-add-card">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nuova Carta
+                    </Button>
+                    <Button variant="outline" onClick={handleUploadCsv} data-testid="button-upload-csv">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Carica CSV
+                    </Button>
+                    <Button variant="outline" onClick={handleExportCsv} data-testid="button-export-csv">
+                      <Download className="w-4 h-4 mr-2" />
+                      Esporta CSV
+                    </Button>
+                    {onAnalytics && (
+                      <Button variant="outline" onClick={onAnalytics} data-testid="button-analytics">
+                        📊 Analytics
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
-              
+
               <div className="text-sm text-muted-foreground">
-                {filteredCards.length} di {cards.length} carte
+                {selectedCardIds.size > 0 ? (
+                  <>
+                    {selectedCardIds.size} selezionate di {filteredCards.length} visibili
+                  </>
+                ) : (
+                  <>
+                    {filteredCards.length} di {cards.length} carte
+                  </>
+                )}
               </div>
             </div>
           </CardContent>
@@ -339,6 +432,19 @@ export default function CmsTable({
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={allVisibleSelected}
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Seleziona tutte le carte visibili"
+                        data-testid="checkbox-select-all"
+                        ref={(el) => {
+                          if (el && someVisibleSelected && !allVisibleSelected) {
+                            el.indeterminate = true;
+                          }
+                        }}
+                      />
+                    </TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead>Categoria</TableHead>
                     <TableHead>Tipo</TableHead>
@@ -350,6 +456,14 @@ export default function CmsTable({
                 <TableBody>
                   {filteredCards.map((card) => (
                     <TableRow key={card.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedCardIds.has(card.id)}
+                          onCheckedChange={(checked) => handleSelectCard(card.id, checked as boolean)}
+                          aria-label={`Seleziona carta ${card.id}`}
+                          data-testid={`checkbox-card-${card.id}`}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono">{card.id}</TableCell>
                       <TableCell>
                         <Badge className={getCategoryBadgeColor(card.colore)}>
@@ -419,12 +533,36 @@ export default function CmsTable({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDelete}
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
               {deleteMutation.isPending ? 'Eliminando...' : 'Elimina'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mass Delete Confirmation Dialog */}
+      <AlertDialog open={showMassDeleteDialog} onOpenChange={setShowMassDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminazione massiva</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare {selectedCardIds.size} carte?
+              Questa azione non può essere annullata e le carte verranno eliminate permanentemente dal database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmMassDelete}
+              disabled={massDeleteMutation.isPending}
+              data-testid="button-confirm-mass-delete"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {massDeleteMutation.isPending ? `Eliminando ${selectedCardIds.size} carte...` : `Elimina ${selectedCardIds.size} carte`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

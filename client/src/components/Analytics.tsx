@@ -1,164 +1,267 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, Users, Target, Clock, ThumbsUp, ThumbsDown, Brain, Flag, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Users, FileText, ThumbsUp, ThumbsDown, TrendingUp, RefreshCw } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line
+} from 'recharts';
 
 interface AnalyticsProps {
-  onBack: () => void;
+  onBack?: () => void;
 }
 
-interface Feedback {
+interface FeedbackData {
   id: string;
   cardId: string;
-  reaction: string;
   deviceId: string;
+  rating: number;
+  difficulty: number;
   createdAt: string;
 }
 
-interface Card {
+interface CardData {
   id: string;
   categoria: string;
   colore: string;
   domanda: string;
-  opzioneA?: string;
-  opzioneB?: string;
-  opzioneC?: string;
-  corretta?: 'A' | 'B' | 'C';
-  battuta?: string;
   tipo: 'quiz' | 'speciale';
   createdAt: string;
 }
+
+interface AnalyticsData {
+  totalFeedback: number;
+  totalCards: number;
+  averageRating: number;
+  averageDifficulty: number;
+  categoryStats: Array<{
+    category: string;
+    count: number;
+    avgRating: number;
+    color: string;
+  }>;
+  ratingDistribution: Array<{
+    rating: number;
+    count: number;
+  }>;
+  difficultyDistribution: Array<{
+    difficulty: number;
+    count: number;
+  }>;
+  recentActivity: Array<{
+    date: string;
+    feedbackCount: number;
+  }>;
+  topPerformingCards: Array<{
+    cardId: string;
+    question: string;
+    avgRating: number;
+    feedbackCount: number;
+  }>;
+}
+
+const COLORS = {
+  'CIBI FURBI & CIBI TRAPPOLA': '#00bf63',
+  'IL PIANETA NEL PIATTO': '#63c1ea',
+  'CULTURA DEL CIBO': '#ff914d',
+  'ANATOMIA A TAVOLA': '#8b5cf6',
+  'default': '#6b7280'
+};
+
 export default function Analytics({ onBack }: AnalyticsProps) {
-  const [selectedPeriod, setSelectedPeriod] = useState('30days');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('30d');
 
-  // Fetch real data from API
-  const { data: allFeedback = [], isLoading: feedbackLoading, error: feedbackError } = useQuery({
+  // Fetch feedback data
+  const { data: feedback = [], isLoading: feedbackLoading } = useQuery({
     queryKey: ['feedback'],
-    queryFn: async (): Promise<Feedback[]> => {
+    queryFn: async (): Promise<FeedbackData[]> => {
       const response = await fetch('/api/feedback');
-      if (!response.ok) {
-        throw new Error('Failed to fetch feedback');
-      }
+      if (!response.ok) throw new Error('Failed to fetch feedback');
       return response.json();
-    },
-    refetchOnWindowFocus: false,
+    }
   });
 
-  const { data: allCards = [], isLoading: cardsLoading, error: cardsError } = useQuery({
+  // Fetch cards data
+  const { data: cards = [], isLoading: cardsLoading } = useQuery({
     queryKey: ['cards'],
-    queryFn: async (): Promise<Card[]> => {
+    queryFn: async (): Promise<CardData[]> => {
       const response = await fetch('/api/cards');
-      if (!response.ok) {
-        throw new Error('Failed to fetch cards');
-      }
+      if (!response.ok) throw new Error('Failed to fetch cards');
       return response.json();
-    },
-    refetchOnWindowFocus: false,
+    }
   });
-
-  // Filter data by selected period
-  const getFilteredFeedback = () => {
-    const now = new Date();
-    const cutoffDate = new Date();
-    
-    switch (selectedPeriod) {
-      case 'today':
-        cutoffDate.setHours(0, 0, 0, 0);
-        break;
-      case '7days':
-        cutoffDate.setDate(now.getDate() - 7);
-        break;
-      case '30days':
-        cutoffDate.setDate(now.getDate() - 30);
-        break;
-      case 'all':
-      default:
-        return allFeedback;
-    }
-    
-    return allFeedback.filter(feedback => new Date(feedback.createdAt) >= cutoffDate);
-  };
-
-  const filteredFeedback = getFilteredFeedback();
-
-  // Process data for analytics
-  const stats = {
-    totalCards: allCards.length,
-    totalFeedback: filteredFeedback.length,
-    avgCorrectRate: 0, // We don't have correct/incorrect data yet
-    avgResponseTime: 0  // We don't have response time data yet
-  };
-
-  // Feedback distribution
-  const feedbackByType = filteredFeedback.reduce((acc, feedback) => {
-    acc[feedback.reaction] = (acc[feedback.reaction] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const feedbackData = [
-    { name: 'Review', value: feedbackByType.review || 0, color: '#dc2626' },
-    { name: 'Easy', value: feedbackByType.easy || 0, color: '#f59e0b' },
-    { name: 'Fun', value: feedbackByType.fun || 0, color: '#3b82f6' },
-    { name: 'Top', value: feedbackByType.top || 0, color: '#22c55e' },
-    { name: 'Hard', value: feedbackByType.hard || 0, color: '#ef4444' },
-    { name: 'Boring', value: feedbackByType.boring || 0, color: '#6b7280' }
-  ].filter(item => item.value > 0);
-
-  // Category performance
-  const categoryData = allCards.reduce((acc, card) => {
-    const categoria = card.categoria;
-    if (!acc[categoria]) {
-      acc[categoria] = { name: categoria.slice(0, 15), total: 0, feedback: 0 };
-    }
-    acc[categoria].total += 1;
-    acc[categoria].feedback += filteredFeedback.filter(f => f.cardId === card.id).length;
-    return acc;
-  }, {} as Record<string, any>);
-
-  const categoryChartData = Object.values(categoryData);
-
-  // Top performing cards (by feedback count)
-  const cardFeedbackCounts = filteredFeedback.reduce((acc, feedback) => {
-    acc[feedback.cardId] = (acc[feedback.cardId] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const topCards = allCards
-    .map(card => ({
-      id: card.id,
-      question: card.domanda.slice(0, 30) + '...',
-      feedback: cardFeedbackCounts[card.id] || 0,
-      correct: 0, // Placeholder
-      flag: 0     // Placeholder
-    }))
-    .sort((a, b) => b.feedback - a.feedback)
-    .slice(0, 5);
 
   const isLoading = feedbackLoading || cardsLoading;
-  const hasError = feedbackError || cardsError;
+
+  // Process analytics data
+  const analyticsData: AnalyticsData = React.useMemo(() => {
+    if (!feedback.length || !cards.length) {
+      return {
+        totalFeedback: 0,
+        totalCards: 0,
+        averageRating: 0,
+        averageDifficulty: 0,
+        categoryStats: [],
+        ratingDistribution: [],
+        difficultyDistribution: [],
+        recentActivity: [],
+        topPerformingCards: []
+      };
+    }
+
+    // Filter feedback by time range
+    const now = new Date();
+    const cutoffDate = new Date();
+    if (timeRange === '7d') {
+      cutoffDate.setDate(now.getDate() - 7);
+    } else if (timeRange === '30d') {
+      cutoffDate.setDate(now.getDate() - 30);
+    } else {
+      cutoffDate.setFullYear(2020); // Show all data
+    }
+
+    const filteredFeedback = feedback.filter(f =>
+      new Date(f.createdAt) >= cutoffDate
+    );
+
+    // Basic stats
+    const totalFeedback = filteredFeedback.length;
+    const totalCards = cards.length;
+    const averageRating = filteredFeedback.length > 0
+      ? filteredFeedback.reduce((sum, f) => sum + f.rating, 0) / filteredFeedback.length
+      : 0;
+    const averageDifficulty = filteredFeedback.length > 0
+      ? filteredFeedback.reduce((sum, f) => sum + f.difficulty, 0) / filteredFeedback.length
+      : 0;
+
+    // Category stats
+    const categoryMap = new Map<string, { ratings: number[], count: number, color: string }>();
+
+    filteredFeedback.forEach(f => {
+      const card = cards.find(c => c.id === f.cardId);
+      if (card) {
+        const category = card.categoria;
+        if (!categoryMap.has(category)) {
+          categoryMap.set(category, {
+            ratings: [],
+            count: 0,
+            color: COLORS[category as keyof typeof COLORS] || COLORS.default
+          });
+        }
+        const categoryData = categoryMap.get(category)!;
+        categoryData.ratings.push(f.rating);
+        categoryData.count++;
+      }
+    });
+
+    const categoryStats = Array.from(categoryMap.entries()).map(([category, data]) => ({
+      category,
+      count: data.count,
+      avgRating: data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length,
+      color: data.color
+    }));
+
+    // Rating distribution
+    const ratingCounts = new Map<number, number>();
+    for (let i = 1; i <= 5; i++) {
+      ratingCounts.set(i, 0);
+    }
+    filteredFeedback.forEach(f => {
+      ratingCounts.set(f.rating, (ratingCounts.get(f.rating) || 0) + 1);
+    });
+    const ratingDistribution = Array.from(ratingCounts.entries()).map(([rating, count]) => ({
+      rating,
+      count
+    }));
+
+    // Difficulty distribution
+    const difficultyCounts = new Map<number, number>();
+    for (let i = 1; i <= 5; i++) {
+      difficultyCounts.set(i, 0);
+    }
+    filteredFeedback.forEach(f => {
+      difficultyCounts.set(f.difficulty, (difficultyCounts.get(f.difficulty) || 0) + 1);
+    });
+    const difficultyDistribution = Array.from(difficultyCounts.entries()).map(([difficulty, count]) => ({
+      difficulty,
+      count
+    }));
+
+    // Recent activity (last 7 days)
+    const activityMap = new Map<string, number>();
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      activityMap.set(dateStr, 0);
+    }
+
+    filteredFeedback.forEach(f => {
+      const date = f.createdAt.split('T')[0];
+      if (activityMap.has(date)) {
+        activityMap.set(date, (activityMap.get(date) || 0) + 1);
+      }
+    });
+
+    const recentActivity = Array.from(activityMap.entries()).map(([date, feedbackCount]) => ({
+      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      feedbackCount
+    }));
+
+    // Top performing cards
+    const cardRatings = new Map<string, { ratings: number[], question: string }>();
+    filteredFeedback.forEach(f => {
+      const card = cards.find(c => c.id === f.cardId);
+      if (card) {
+        if (!cardRatings.has(f.cardId)) {
+          cardRatings.set(f.cardId, { ratings: [], question: card.domanda });
+        }
+        cardRatings.get(f.cardId)!.ratings.push(f.rating);
+      }
+    });
+
+    const topPerformingCards = Array.from(cardRatings.entries())
+      .map(([cardId, data]) => ({
+        cardId,
+        question: data.question.length > 50 ? data.question.substring(0, 50) + '...' : data.question,
+        avgRating: data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length,
+        feedbackCount: data.ratings.length
+      }))
+      .filter(card => card.feedbackCount >= 2) // Only show cards with at least 2 ratings
+      .sort((a, b) => b.avgRating - a.avgRating)
+      .slice(0, 5);
+
+    return {
+      totalFeedback,
+      totalCards,
+      averageRating,
+      averageDifficulty,
+      categoryStats,
+      ratingDistribution,
+      difficultyDistribution,
+      recentActivity,
+      topPerformingCards
+    };
+  }, [feedback, cards, timeRange]);
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 flex items-center justify-center">
         <div className="text-center space-y-4">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto" />
-          <p className="text-muted-foreground">Caricando analytics...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (hasError) {
-    return (
-      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <h2 className="text-2xl font-bold text-destructive">😅 Errore</h2>
-          <p className="text-muted-foreground">Errore nel caricamento dei dati analytics</p>
-          <Button onClick={onBack}>Torna al CMS</Button>
+          <p className="text-muted-foreground">Loading analytics data...</p>
         </div>
       </div>
     );
@@ -170,123 +273,145 @@ export default function Analytics({ onBack }: AnalyticsProps) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold">Analytics</h1>
-            <p className="text-muted-foreground">Analisi delle performance e feedback</p>
+            <h1 className="text-3xl font-bold">📊 Analytics Dashboard</h1>
+            <p className="text-muted-foreground">
+              Insights into your trivia game performance
+            </p>
           </div>
-          <Button variant="outline" onClick={onBack} data-testid="button-back-analytics">
-            Torna al CMS
-          </Button>
+          <div className="flex gap-2">
+            {/* Time range selector */}
+            <div className="flex gap-1">
+              {(['7d', '30d', 'all'] as const).map((range) => (
+                <Button
+                  key={range}
+                  variant={timeRange === range ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTimeRange(range)}
+                >
+                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'All Time'}
+                </Button>
+              ))}
+            </div>
+            {onBack && (
+              <Button variant="outline" onClick={onBack}>
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to CMS
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Filter */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex gap-4 items-center">
-              <span className="text-sm font-medium">Periodo:</span>
-              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <SelectTrigger className="w-48" data-testid="select-period">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Oggi</SelectItem>
-                  <SelectItem value="7days">Ultimi 7 giorni</SelectItem>
-                  <SelectItem value="30days">Ultimi 30 giorni</SelectItem>
-                  <SelectItem value="all">Tutti i dati</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Carte Totali</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-total-cards">{stats.totalCards}</div>
-              <p className="text-xs text-muted-foreground">nel database</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Feedback Totali</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Feedback</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-total-feedback">{stats.totalFeedback}</div>
-              <p className="text-xs text-muted-foreground">nel periodo selezionato</p>
+              <div className="text-2xl font-bold">{analyticsData.totalFeedback}</div>
+              <p className="text-xs text-muted-foreground">
+                Player responses collected
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Dispositivi Unici</CardTitle>
-              <Brain className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Total Cards</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-unique-devices">{new Set(filteredFeedback.map(f => f.deviceId)).size}</div>
-              <p className="text-xs text-muted-foreground">utenti coinvolti</p>
+              <div className="text-2xl font-bold">{analyticsData.totalCards}</div>
+              <p className="text-xs text-muted-foreground">
+                Trivia questions available
+              </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Carte con Feedback</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Avg Rating</CardTitle>
+              <ThumbsUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold" data-testid="stat-cards-with-feedback">{Object.keys(cardFeedbackCounts).length}</div>
-              <p className="text-xs text-muted-foreground">su {stats.totalCards} totali</p>
+              <div className="text-2xl font-bold">
+                {analyticsData.averageRating.toFixed(1)}/5
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Player satisfaction
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Difficulty</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {analyticsData.averageDifficulty.toFixed(1)}/5
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Perceived difficulty
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Charts Section */}
+        {/* Charts Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Category Performance */}
           <Card>
             <CardHeader>
-              <CardTitle>Performance per Categoria</CardTitle>
-              <CardDescription>Feedback ricevuti per categoria</CardDescription>
+              <CardTitle>Category Performance</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={categoryChartData}>
+                <BarChart data={analyticsData.categoryStats}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
+                  <XAxis
+                    dataKey="category"
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    fontSize={12}
+                  />
                   <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="feedback" fill="hsl(var(--primary))" />
+                  <Tooltip
+                    formatter={(value, name) => [
+                      name === 'avgRating' ? `${Number(value).toFixed(1)} ⭐` : value,
+                      name === 'avgRating' ? 'Avg Rating' : 'Feedback Count'
+                    ]}
+                  />
+                  <Bar dataKey="count" fill="#8884d8" name="Feedback Count" />
+                  <Bar dataKey="avgRating" fill="#82ca9d" name="Avg Rating" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          {/* Feedback Distribution */}
+          {/* Rating Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Distribuzione Feedback</CardTitle>
-              <CardDescription>Tipi di reazioni raccolte</CardDescription>
+              <CardTitle>Rating Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={feedbackData}
+                    data={analyticsData.ratingDistribution}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
+                    label={({ rating, count }) => `${rating}⭐ (${count})`}
                     outerRadius={80}
                     fill="#8884d8"
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    dataKey="count"
                   >
-                    {feedbackData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {analyticsData.ratingDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={`hsl(${entry.rating * 60}, 70%, 50%)`} />
                     ))}
                   </Pie>
                   <Tooltip />
@@ -296,34 +421,60 @@ export default function Analytics({ onBack }: AnalyticsProps) {
           </Card>
         </div>
 
-        {/* Top Performing Cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Carte Top Performance</CardTitle>
-            <CardDescription>Carte con le migliori statistiche</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topCards.map((card, index) => (
-                <div key={card.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="outline">#{index + 1}</Badge>
-                    <div>
-                      <p className="font-medium">{card.id}</p>
-                      <p className="text-sm text-muted-foreground">{card.question}</p>
+        {/* Charts Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity (Last 7 Days)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={analyticsData.recentActivity}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="feedbackCount"
+                    stroke="#8884d8"
+                    strokeWidth={2}
+                    name="Feedback Count"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Top Performing Cards */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Performing Cards</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {analyticsData.topPerformingCards.length > 0 ? (
+                analyticsData.topPerformingCards.map((card, index) => (
+                  <div key={card.cardId} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{card.question}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {card.feedbackCount} responses
+                      </p>
                     </div>
+                    <Badge variant="secondary">
+                      {card.avgRating.toFixed(1)}⭐
+                    </Badge>
                   </div>
-                  <div className="flex items-center gap-6 text-sm">
-                    <div className="flex items-center gap-1">
-                      <ThumbsUp className="w-4 h-4 text-blue-500" />
-                      <span>{card.feedback} feedback</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                ))
+              ) : (
+                <p className="text-muted-foreground text-center py-8">
+                  No cards with sufficient feedback yet
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

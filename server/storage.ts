@@ -1,16 +1,16 @@
-import { 
-  type User, 
-  type InsertUser, 
-  type Card, 
-  type InsertCard, 
-  type Feedback, 
+import {
+  type User,
+  type InsertUser,
+  type Card,
+  type InsertCard,
+  type Feedback,
   type InsertFeedback,
   users,
   cards,
-  feedback 
+  feedback
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, inArray } from "drizzle-orm";
 
 // Storage interface for Fluffy Trivia
 export interface IStorage {
@@ -27,12 +27,14 @@ export interface IStorage {
   createCard(card: InsertCard): Promise<Card>;
   updateCard(id: string, card: Partial<InsertCard>): Promise<Card | undefined>;
   deleteCard(id: string): Promise<boolean>;
+  deleteMultipleCards(ids: string[]): Promise<number>;
   
   // Feedback methods
   createFeedback(feedback: InsertFeedback): Promise<Feedback>;
   getFeedbackByCard(cardId: string): Promise<Feedback[]>;
   getFeedbackByDevice(deviceId: string): Promise<Feedback[]>;
   getAllFeedback(): Promise<Feedback[]>;
+  deleteAllFeedback(): Promise<number>;
 }
 
 // Database storage implementation
@@ -104,6 +106,13 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount || 0) > 0;
   }
 
+  async deleteMultipleCards(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+
+    const result = await db.delete(cards).where(inArray(cards.id, ids));
+    return result.rowCount || 0;
+  }
+
   // Feedback methods
   async createFeedback(feedbackData: InsertFeedback): Promise<Feedback> {
     const [newFeedback] = await db
@@ -123,6 +132,11 @@ export class DatabaseStorage implements IStorage {
 
   async getAllFeedback(): Promise<Feedback[]> {
     return await db.select().from(feedback);
+  }
+
+  async deleteAllFeedback(): Promise<number> {
+    const result = await db.delete(feedback);
+    return result.rowCount || 0;
   }
 }
 
