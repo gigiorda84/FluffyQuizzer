@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Category {
   id: string;
@@ -20,6 +20,7 @@ interface CategorySelectorProps {
 
 export default function CategorySelector({ categories, onSelectCategory, onSelectMix, onCmsLogin }: CategorySelectorProps) {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const getCategoryColorClass = (color: string) => {
     switch (color.toLowerCase()) {
@@ -50,13 +51,28 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
     }
   ];
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % instructionSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + instructionSlides.length) % instructionSlides.length);
+  };
+
+  const handleDialogClose = () => {
+    setIsInstructionsOpen(false);
+    setCurrentSlide(0);
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#7cdacf' }}>
-      {/* Background Image - anchored to bottom center and 50% smaller */}
-      <div
-        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1/2 h-1/2 bg-contain bg-center bg-no-repeat bg-bottom"
-        style={{ backgroundImage: 'url(/background-main.jpg)' }}
-      ></div>
+      {/* Background Image - anchored to bottom center */}
+      <img
+        src="/background-main.jpg"
+        alt="background"
+        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3/4 max-w-4xl object-contain"
+        style={{ maxHeight: '60vh' }}
+      />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
         {/* Logo and Title Section */}
@@ -75,37 +91,55 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
           {/* ISTRUZIONI Button */}
           <Dialog open={isInstructionsOpen} onOpenChange={setIsInstructionsOpen}>
             <DialogTrigger asChild>
-              <div className="bg-black text-white px-12 py-6 rounded-3xl cursor-pointer hover:bg-gray-800 transition-all shadow-lg border-4 border-white w-72">
+              <button className="bg-black text-white px-12 py-6 rounded-3xl cursor-pointer hover:bg-gray-800 transition-all shadow-lg border-4 border-white w-72">
                 <h3 className="text-2xl font-bold text-center uppercase tracking-wider">ISTRUZIONI</h3>
-              </div>
+              </button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg mx-auto bg-background border-2 border-foreground" aria-describedby="instructions-description">
-              <DialogHeader>
-                <DialogTitle className="text-center text-xl font-bold uppercase tracking-wide text-foreground">Istruzioni del Gioco</DialogTitle>
-              </DialogHeader>
-              <div className="relative px-12" id="instructions-description">
-                <Carousel className="w-full">
-                  <CarouselContent>
-                    {instructionSlides.map((slide, index) => (
-                      <CarouselItem key={index}>
-                        <Card className="p-6 bg-card border-2 border-foreground">
-                          <h3 className="text-lg font-bold mb-4 text-center uppercase tracking-wide text-foreground">{slide.title}</h3>
-                          <p className="text-sm leading-relaxed text-muted-foreground">{slide.content}</p>
-                          <div className="text-center mt-4 text-xs text-muted-foreground uppercase tracking-wide">
-                            {index + 1} di {instructionSlides.length}
-                          </div>
-                        </Card>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious className="absolute left-0 top-1/2 -translate-y-1/2 border-2 border-foreground bg-card hover:bg-muted" />
-                  <CarouselNext className="absolute right-0 top-1/2 -translate-y-1/2 border-2 border-foreground bg-card hover:bg-muted" />
-                </Carousel>
-                <div className="text-center mt-4">
+            <DialogContent className="max-w-4xl bg-background border-2 border-foreground p-8" aria-describedby="instructions-description">
+              <div className="space-y-6" id="instructions-description">
+                {/* Slide Content */}
+                <div className="min-h-[250px] flex flex-col justify-center px-8">
+                  <h3 className="text-3xl font-bold text-center uppercase tracking-wide text-foreground mb-6">
+                    {instructionSlides[currentSlide].title}
+                  </h3>
+                  <p className="text-lg leading-relaxed text-muted-foreground text-center">
+                    {instructionSlides[currentSlide].content}
+                  </p>
+                </div>
+
+                {/* Navigation Controls */}
+                <div className="flex items-center justify-between px-4">
                   <Button
                     variant="outline"
-                    onClick={() => setIsInstructionsOpen(false)}
-                    className="border-2 border-foreground bg-card hover:bg-muted text-foreground uppercase tracking-wide"
+                    size="icon"
+                    onClick={prevSlide}
+                    className="border-2 border-foreground bg-card hover:bg-muted h-12 w-12"
+                    disabled={currentSlide === 0}
+                  >
+                    <ChevronLeft className="h-6 w-6" />
+                  </Button>
+
+                  <div className="text-sm text-muted-foreground uppercase tracking-wide font-semibold">
+                    {currentSlide + 1} di {instructionSlides.length}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={nextSlide}
+                    className="border-2 border-foreground bg-card hover:bg-muted h-12 w-12"
+                    disabled={currentSlide === instructionSlides.length - 1}
+                  >
+                    <ChevronRight className="h-6 w-6" />
+                  </Button>
+                </div>
+
+                {/* Close Button */}
+                <div className="text-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleDialogClose}
+                    className="border-2 border-foreground bg-card hover:bg-muted text-foreground uppercase tracking-wide px-10 py-5 text-base"
                   >
                     CHIUDI
                   </Button>
