@@ -204,19 +204,19 @@ export default function QuizCard({
         </div>
 
         {/* Main Card Content */}
-        <div className="flex-1 bg-gray-100 relative">
-          {/* Question Section - Top half */}
-          <div className="absolute top-0 left-0 right-0 h-1/2 flex items-center justify-center px-8">
-            <h1 className="text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
+        <div className="flex-1 bg-gray-100 flex flex-col px-8 py-6">
+          {/* Question Section - Fixed at top */}
+          <div className="flex-shrink-0 mb-6">
+            <h1 className="text-xl md:text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
               {domanda}
             </h1>
           </div>
 
-          {/* Answer Options - Absolute center position */}
-          <div className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2 px-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+          {/* Answer Options - Centered in remaining space */}
+          <div className="flex-1 flex items-center justify-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl">
               <div
-                className={`bg-black text-white p-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 min-h-[120px] flex items-center justify-center ${
+                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
                   showResult && corretta === 'A'
                     ? `ring-4 ${styles.correctRing}`
                     : showResult && selectedOption === 'A' && corretta !== 'A'
@@ -242,7 +242,7 @@ export default function QuizCard({
               </div>
 
               <div
-                className={`bg-black text-white p-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 min-h-[120px] flex items-center justify-center ${
+                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
                   showResult && corretta === 'B'
                     ? `ring-4 ${styles.correctRing}`
                     : showResult && selectedOption === 'B' && corretta !== 'B'
@@ -268,7 +268,7 @@ export default function QuizCard({
               </div>
 
               <div
-                className={`bg-black text-white p-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 min-h-[120px] flex items-center justify-center ${
+                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
                   showResult && corretta === 'C'
                     ? `ring-4 ${styles.correctRing}`
                     : showResult && selectedOption === 'C' && corretta !== 'C'
@@ -295,10 +295,10 @@ export default function QuizCard({
             </div>
           </div>
 
-          {/* Comment Section - Bottom half */}
+          {/* Comment Section - Below answers */}
           {showResult && battuta && (
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 flex items-center justify-center px-8">
-              <p className="text-lg text-black font-bold leading-relaxed text-center">
+            <div className="flex-shrink-0 mt-6">
+              <p className="text-base md:text-lg text-black font-bold leading-relaxed text-center">
                 {battuta}
               </p>
             </div>
