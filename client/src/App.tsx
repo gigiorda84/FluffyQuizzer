@@ -9,7 +9,7 @@ import CategorySelector from "./components/CategorySelector";
 import GameScreen from "./components/GameScreen";
 import CmsLogin from "./components/CmsLogin";
 import CmsTable from "./components/CmsTable";
-import Analytics from "./components/Analytics";
+import Analytics from "./components/AnalyticsNew";
 import NotFound from "@/pages/not-found";
 
 // Categories from database - display name maps to database category name

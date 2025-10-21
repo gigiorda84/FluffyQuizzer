@@ -13,6 +13,8 @@ interface QuizCardProps {
   opzioneC: string;
   corretta: 'A' | 'B' | 'C';
   battuta?: string;
+  sessionId: string | null;
+  deviceId: string;
   onAnswer: (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => void;
   onFeedback: (reaction: string) => void;
   onNext?: () => void;
@@ -20,7 +22,7 @@ interface QuizCardProps {
 }
 
 export default function QuizCard({
-  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, onAnswer, onFeedback, onNext, onBack
+  id, categoria, colore, domanda, opzioneA, opzioneB, opzioneC, corretta, battuta, sessionId, deviceId, onAnswer, onFeedback, onNext, onBack
 }: QuizCardProps) {
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -38,70 +40,71 @@ export default function QuizCard({
     setShowResult(true);
     onAnswer(option, isCorrect, timeMs);
 
-    // Send answer data to analytics
-    const deviceId = localStorage.getItem('deviceId') ||
-      (() => {
-        const newId = crypto.randomUUID();
-        localStorage.setItem('deviceId', newId);
-        return newId;
-      })();
-
-    fetch('/api/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cardId: id,
-        deviceId,
-        reaction: 'answered',
-        correct: isCorrect,
-        timeMs
-      })
-    }).catch(err => console.error('Failed to save answer data:', err));
+    // Record quiz answer in new quiz_answers table
+    if (sessionId) {
+      fetch('/api/quiz-answers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          cardId: id,
+          deviceId,
+          selectedOption: option,
+          correct: isCorrect,
+          timeMs
+        })
+      }).catch(err => console.error('Failed to save quiz answer:', err));
+    }
   };
 
   const handleFeedbackClick = (reaction: string) => {
-    setSelectedFeedback(prev => {
-      let newFeedback = [...prev];
+    // Calculate new feedback state
+    let updatedFeedback = [...selectedFeedback];
 
-      if (newFeedback.includes(reaction)) {
-        // Remove if already selected
-        newFeedback = newFeedback.filter(item => item !== reaction);
-      } else {
-        // Add the new reaction
-        newFeedback = [...newFeedback, reaction];
+    if (updatedFeedback.includes(reaction)) {
+      // Remove if already selected
+      updatedFeedback = updatedFeedback.filter(item => item !== reaction);
+    } else {
+      // Add the new reaction
+      updatedFeedback.push(reaction);
 
-        // Handle mutual exclusivity
-        if (reaction === 'easy' && newFeedback.includes('hard')) {
-          newFeedback = newFeedback.filter(item => item !== 'hard');
-        } else if (reaction === 'hard' && newFeedback.includes('easy')) {
-          newFeedback = newFeedback.filter(item => item !== 'easy');
-        } else if (reaction === 'fun' && newFeedback.includes('boring')) {
-          newFeedback = newFeedback.filter(item => item !== 'boring');
-        } else if (reaction === 'boring' && newFeedback.includes('fun')) {
-          newFeedback = newFeedback.filter(item => item !== 'fun');
-        }
+      // Handle mutual exclusivity
+      if (reaction === 'easy' && updatedFeedback.includes('hard')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'hard');
+      } else if (reaction === 'hard' && updatedFeedback.includes('easy')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'easy');
+      } else if (reaction === 'fun' && updatedFeedback.includes('boring')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'boring');
+      } else if (reaction === 'boring' && updatedFeedback.includes('fun')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'fun');
       }
+    }
 
-      return newFeedback;
-    });
+    // Update state
+    setSelectedFeedback(updatedFeedback);
     onFeedback(reaction);
 
-    // Send feedback data to analytics
-    const deviceId = localStorage.getItem('deviceId') ||
-      (() => {
-        const newId = crypto.randomUUID();
-        localStorage.setItem('deviceId', newId);
-        return newId;
-      })();
+    // Send feedback with new format (6 boolean fields)
+    const feedbackData: any = {
+      cardId: id,
+      deviceId,
+      review: updatedFeedback.includes('review'),
+      top: updatedFeedback.includes('top'),
+      easy: updatedFeedback.includes('easy'),
+      hard: updatedFeedback.includes('hard'),
+      fun: updatedFeedback.includes('fun'),
+      boring: updatedFeedback.includes('boring')
+    };
+
+    // Only add sessionId if it exists
+    if (sessionId) {
+      feedbackData.sessionId = sessionId;
+    }
 
     fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cardId: id,
-        deviceId,
-        reaction
-      })
+      body: JSON.stringify(feedbackData)
     }).catch(err => console.error('Failed to save feedback:', err));
   };
 

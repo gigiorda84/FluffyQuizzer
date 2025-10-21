@@ -5,12 +5,18 @@ import {
   type InsertCard,
   type Feedback,
   type InsertFeedback,
+  type GameSession,
+  type InsertGameSession,
+  type QuizAnswer,
+  type InsertQuizAnswer,
   users,
   cards,
-  feedback
+  feedback,
+  gameSessions,
+  quizAnswers
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, sql, inArray, and } from "drizzle-orm";
+import { eq, sql, inArray, and, desc, count } from "drizzle-orm";
 
 // Storage interface for Fluffy Trivia
 export interface IStorage {
@@ -37,6 +43,17 @@ export interface IStorage {
   getFeedbackByDevice(deviceId: string): Promise<Feedback[]>;
   getAllFeedback(): Promise<Feedback[]>;
   deleteAllFeedback(): Promise<number>;
+
+  // Game Session methods
+  createGameSession(session: InsertGameSession): Promise<GameSession>;
+  getGameSession(id: string): Promise<GameSession | undefined>;
+  updateGameSession(id: string, data: Partial<InsertGameSession>): Promise<GameSession | undefined>;
+
+  // Quiz Answer methods
+  createQuizAnswer(answer: InsertQuizAnswer): Promise<QuizAnswer>;
+  getQuizAnswersBySession(sessionId: string): Promise<QuizAnswer[]>;
+  getQuizAnswersByCard(cardId: string): Promise<QuizAnswer[]>;
+  getAllQuizAnswers(): Promise<QuizAnswer[]>;
 }
 
 // Database storage implementation
@@ -178,6 +195,50 @@ export class DatabaseStorage implements IStorage {
   async deleteAllFeedback(): Promise<number> {
     const result = await db.delete(feedback);
     return result.rowCount || 0;
+  }
+
+  // Game Session methods
+  async createGameSession(sessionData: InsertGameSession): Promise<GameSession> {
+    const [newSession] = await db
+      .insert(gameSessions)
+      .values(sessionData)
+      .returning();
+    return newSession;
+  }
+
+  async getGameSession(id: string): Promise<GameSession | undefined> {
+    const [session] = await db.select().from(gameSessions).where(eq(gameSessions.id, id));
+    return session || undefined;
+  }
+
+  async updateGameSession(id: string, data: Partial<InsertGameSession>): Promise<GameSession | undefined> {
+    const [updatedSession] = await db
+      .update(gameSessions)
+      .set(data)
+      .where(eq(gameSessions.id, id))
+      .returning();
+    return updatedSession || undefined;
+  }
+
+  // Quiz Answer methods
+  async createQuizAnswer(answerData: InsertQuizAnswer): Promise<QuizAnswer> {
+    const [newAnswer] = await db
+      .insert(quizAnswers)
+      .values(answerData)
+      .returning();
+    return newAnswer;
+  }
+
+  async getQuizAnswersBySession(sessionId: string): Promise<QuizAnswer[]> {
+    return await db.select().from(quizAnswers).where(eq(quizAnswers.sessionId, sessionId));
+  }
+
+  async getQuizAnswersByCard(cardId: string): Promise<QuizAnswer[]> {
+    return await db.select().from(quizAnswers).where(eq(quizAnswers.cardId, cardId));
+  }
+
+  async getAllQuizAnswers(): Promise<QuizAnswer[]> {
+    return await db.select().from(quizAnswers);
   }
 }
 

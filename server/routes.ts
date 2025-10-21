@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertCardSchema, insertFeedbackSchema } from "@shared/schema";
+import { insertCardSchema, insertFeedbackSchema, insertGameSessionSchema, insertQuizAnswerSchema } from "@shared/schema";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
@@ -253,6 +253,243 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting all feedback:", error);
       res.status(500).json({ error: "Failed to delete all feedback" });
+    }
+  });
+
+  // ============ GAME SESSIONS API ============
+
+  // Create a new game session
+  app.post("/api/sessions", async (req, res) => {
+    try {
+      const sessionData = insertGameSessionSchema.parse(req.body);
+      const session = await storage.createGameSession(sessionData);
+      res.status(201).json(session);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid session data", details: error.errors });
+      }
+      console.error("Error creating session:", error);
+      res.status(500).json({ error: "Failed to create session" });
+    }
+  });
+
+  // Get a session by ID
+  app.get("/api/sessions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const session = await storage.getGameSession(id);
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching session:", error);
+      res.status(500).json({ error: "Failed to fetch session" });
+    }
+  });
+
+  // Update a session (e.g., when ending it)
+  app.put("/api/sessions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sessionData = insertGameSessionSchema.partial().parse(req.body);
+      const updatedSession = await storage.updateGameSession(id, sessionData);
+
+      if (!updatedSession) {
+        return res.status(404).json({ error: "Session not found" });
+      }
+
+      res.json(updatedSession);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid session data", details: error.errors });
+      }
+      console.error("Error updating session:", error);
+      res.status(500).json({ error: "Failed to update session" });
+    }
+  });
+
+  // ============ QUIZ ANSWERS API ============
+
+  // Record a quiz answer
+  app.post("/api/quiz-answers", async (req, res) => {
+    try {
+      const answerData = insertQuizAnswerSchema.parse(req.body);
+      const answer = await storage.createQuizAnswer(answerData);
+      res.status(201).json(answer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid answer data", details: error.errors });
+      }
+      console.error("Error recording answer:", error);
+      res.status(500).json({ error: "Failed to record answer" });
+    }
+  });
+
+  // Get all quiz answers
+  app.get("/api/quiz-answers", async (req, res) => {
+    try {
+      const answers = await storage.getAllQuizAnswers();
+      res.json(answers);
+    } catch (error) {
+      console.error("Error fetching quiz answers:", error);
+      res.status(500).json({ error: "Failed to fetch quiz answers" });
+    }
+  });
+
+  // Get quiz answers by session
+  app.get("/api/quiz-answers/session/:sessionId", async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const answers = await storage.getQuizAnswersBySession(sessionId);
+      res.json(answers);
+    } catch (error) {
+      console.error("Error fetching answers by session:", error);
+      res.status(500).json({ error: "Failed to fetch answers by session" });
+    }
+  });
+
+  // Get quiz answers by card
+  app.get("/api/quiz-answers/card/:cardId", async (req, res) => {
+    try {
+      const { cardId } = req.params;
+      const answers = await storage.getQuizAnswersByCard(cardId);
+      res.json(answers);
+    } catch (error) {
+      console.error("Error fetching answers by card:", error);
+      res.status(500).json({ error: "Failed to fetch answers by card" });
+    }
+  });
+
+  // ============ ANALYTICS API ============
+
+  // Get analytics data with aggregations
+  app.get("/api/analytics", async (req, res) => {
+    try {
+      const cards = await storage.getAllCards();
+      const quizAnswers = await storage.getAllQuizAnswers();
+      const allFeedback = await storage.getAllFeedback();
+
+      // Group quiz answers by card
+      const cardStatsMap = new Map();
+
+      // Initialize stats for each card
+      cards.forEach(card => {
+        cardStatsMap.set(card.id, {
+          cardId: card.id,
+          question: card.domanda,
+          category: card.categoria,
+          color: card.colore,
+          totalAnswers: 0,
+          correctAnswers: 0,
+          wrongAnswers: 0,
+          correctPercentage: 0,
+          wrongPercentage: 0,
+          avgResponseTime: 0,
+          // Feedback counts (the 6 options)
+          reviewCount: 0,
+          topCount: 0,
+          easyCount: 0,
+          hardCount: 0,
+          funCount: 0,
+          boringCount: 0,
+          totalFeedback: 0
+        });
+      });
+
+      // Process quiz answers
+      quizAnswers.forEach(answer => {
+        const stats = cardStatsMap.get(answer.cardId);
+        if (stats) {
+          stats.totalAnswers++;
+          if (answer.correct) {
+            stats.correctAnswers++;
+          } else {
+            stats.wrongAnswers++;
+          }
+        }
+      });
+
+      // Process feedback
+      allFeedback.forEach(fb => {
+        const stats = cardStatsMap.get(fb.cardId);
+        if (stats) {
+          if (fb.review) stats.reviewCount++;
+          if (fb.top) stats.topCount++;
+          if (fb.easy) stats.easyCount++;
+          if (fb.hard) stats.hardCount++;
+          if (fb.fun) stats.funCount++;
+          if (fb.boring) stats.boringCount++;
+          // Count how many feedback options were selected in this feedback entry
+          const feedbackOptionsCount = [fb.review, fb.top, fb.easy, fb.hard, fb.fun, fb.boring]
+            .filter(Boolean).length;
+          stats.totalFeedback += feedbackOptionsCount;
+        }
+      });
+
+      // Calculate percentages and filter cards with minimum 2 feedback
+      const cardStats = Array.from(cardStatsMap.values())
+        .map(stats => {
+          if (stats.totalAnswers > 0) {
+            stats.correctPercentage = Math.round((stats.correctAnswers / stats.totalAnswers) * 100);
+            stats.wrongPercentage = Math.round((stats.wrongAnswers / stats.totalAnswers) * 100);
+          }
+          return stats;
+        })
+        .filter(stats => stats.totalFeedback >= 2 || stats.totalAnswers >= 2); // Show only if at least 2 feedback/answers
+
+      // Sort by top votes (most voted cards)
+      const topVotedCards = [...cardStats]
+        .sort((a, b) => b.topCount - a.topCount)
+        .slice(0, 10);
+
+      // Sort by correct percentage
+      const bestPerformingCards = [...cardStats]
+        .filter(s => s.totalAnswers >= 2)
+        .sort((a, b) => b.correctPercentage - a.correctPercentage)
+        .slice(0, 10);
+
+      // Sort by wrong percentage (most difficult)
+      const mostDifficultCards = [...cardStats]
+        .filter(s => s.totalAnswers >= 2)
+        .sort((a, b) => b.wrongPercentage - a.wrongPercentage)
+        .slice(0, 10);
+
+      // Overall statistics
+      const totalQuizAnswers = quizAnswers.length;
+      const totalCorrect = quizAnswers.filter(a => a.correct).length;
+      const totalWrong = totalQuizAnswers - totalCorrect;
+      const overallCorrectPercentage = totalQuizAnswers > 0
+        ? Math.round((totalCorrect / totalQuizAnswers) * 100)
+        : 0;
+
+      const response = {
+        overview: {
+          totalCards: cards.length,
+          totalQuizAnswers,
+          totalCorrect,
+          totalWrong,
+          overallCorrectPercentage,
+          totalFeedbackEntries: allFeedback.length
+        },
+        cardStats, // All cards with stats (filtered by minimum 2 feedback)
+        topVotedCards,
+        bestPerformingCards,
+        mostDifficultCards,
+        feedbackSummary: {
+          totalReview: allFeedback.reduce((sum, f) => sum + (f.review ? 1 : 0), 0),
+          totalTop: allFeedback.reduce((sum, f) => sum + (f.top ? 1 : 0), 0),
+          totalEasy: allFeedback.reduce((sum, f) => sum + (f.easy ? 1 : 0), 0),
+          totalHard: allFeedback.reduce((sum, f) => sum + (f.hard ? 1 : 0), 0),
+          totalFun: allFeedback.reduce((sum, f) => sum + (f.fun ? 1 : 0), 0),
+          totalBoring: allFeedback.reduce((sum, f) => sum + (f.boring ? 1 : 0), 0)
+        }
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
     }
   });
 

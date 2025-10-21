@@ -6,36 +6,61 @@ interface SpecialCardProps {
   categoria: string;
   titolo: string;
   descrizione: string;
+  sessionId: string | null;
+  deviceId: string;
   onFeedback: (reaction: string) => void;
   onNext?: () => void;
   onBack?: () => void;
 }
 
-export default function SpecialCard({ id, categoria, titolo, descrizione, onFeedback, onNext, onBack }: SpecialCardProps) {
-  const [selectedFeedback, setSelectedFeedback] = useState<Set<string>>(new Set());
+export default function SpecialCard({ id, categoria, titolo, descrizione, sessionId, deviceId, onFeedback, onNext, onBack }: SpecialCardProps) {
+  const [selectedFeedback, setSelectedFeedback] = useState<string[]>([]);
 
   const handleFeedbackClick = (reaction: string) => {
-    setSelectedFeedback(prev => {
-      const newSelected = new Set(prev);
+    // Calculate new feedback state
+    let updatedFeedback = [...selectedFeedback];
+
+    if (updatedFeedback.includes(reaction)) {
+      // Remove if already selected
+      updatedFeedback = updatedFeedback.filter(item => item !== reaction);
+    } else {
+      // Add the new reaction
+      updatedFeedback.push(reaction);
 
       // Handle mutual exclusivity for FUN/BORING
-      if (reaction === 'fun' && newSelected.has('boring')) {
-        newSelected.delete('boring');
-      } else if (reaction === 'boring' && newSelected.has('fun')) {
-        newSelected.delete('fun');
+      if (reaction === 'fun' && updatedFeedback.includes('boring')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'boring');
+      } else if (reaction === 'boring' && updatedFeedback.includes('fun')) {
+        updatedFeedback = updatedFeedback.filter(item => item !== 'fun');
       }
+    }
 
-      // Toggle the clicked reaction
-      if (newSelected.has(reaction)) {
-        newSelected.delete(reaction);
-      } else {
-        newSelected.add(reaction);
-      }
-
-      return newSelected;
-    });
-
+    // Update state
+    setSelectedFeedback(updatedFeedback);
     onFeedback(reaction);
+
+    // Send feedback with new format (6 boolean fields)
+    const feedbackData: any = {
+      cardId: id,
+      deviceId,
+      review: updatedFeedback.includes('review'),
+      top: updatedFeedback.includes('top'),
+      easy: updatedFeedback.includes('easy'),
+      hard: updatedFeedback.includes('hard'),
+      fun: updatedFeedback.includes('fun'),
+      boring: updatedFeedback.includes('boring')
+    };
+
+    // Only add sessionId if it exists
+    if (sessionId) {
+      feedbackData.sessionId = sessionId;
+    }
+
+    fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedbackData)
+    }).catch(err => console.error('Failed to save feedback:', err));
   };
   return (
     <div className="min-h-screen bg-gray-900">
@@ -95,7 +120,7 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
             <div className="flex flex-col gap-3">
               <button
                 className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.has('review')
+                  selectedFeedback.includes('review')
                     ? 'bg-white text-black'
                     : 'bg-transparent text-white hover:bg-white hover:text-black'
                 }`}
@@ -106,7 +131,7 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
               </button>
               <button
                 className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.has('top')
+                  selectedFeedback.includes('top')
                     ? 'bg-white text-black'
                     : 'bg-transparent text-white hover:bg-white hover:text-black'
                 }`}
@@ -121,7 +146,7 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
             <div className="flex flex-col gap-3">
               <button
                 className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.has('fun')
+                  selectedFeedback.includes('fun')
                     ? 'bg-white text-black'
                     : 'bg-transparent text-white hover:bg-white hover:text-black'
                 }`}
@@ -132,7 +157,7 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, onFeed
               </button>
               <button
                 className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.has('boring')
+                  selectedFeedback.includes('boring')
                     ? 'bg-white text-black'
                     : 'bg-transparent text-white hover:bg-white hover:text-black'
                 }`}

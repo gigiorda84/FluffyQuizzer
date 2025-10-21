@@ -6,6 +6,7 @@ import QuizCard from "./QuizCard";
 import SpecialCard from "./SpecialCard";
 import FeedbackButtons from "./FeedbackButtons";
 import { apiRequest } from "@/lib/queryClient";
+import { useGameSession } from "@/hooks/useGameSession";
 
 interface Card {
   id: string;
@@ -32,6 +33,7 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
   const [showFeedback, setShowFeedback] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For forcing re-fetch
+  const { sessionId, deviceId, incrementCardsPlayed } = useGameSession();
 
   // Fetch random card (optionally filtered by category)
   const { data: currentCard, isLoading, error, refetch } = useQuery({
@@ -73,28 +75,10 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
     setAnswered(false);
   }, [cardKey]);
 
-  const getDeviceId = () => {
-    let deviceId = localStorage.getItem('fluffy-device-id');
-    if (!deviceId) {
-      deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      localStorage.setItem('fluffy-device-id', deviceId);
-    }
-    return deviceId;
-  };
-
   const handleAnswer = (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => {
     setAnswered(true);
     setShowFeedback(true);
-    
-    if (currentCard) {
-      feedbackMutation.mutate({
-        cardId: currentCard.id,
-        deviceId: getDeviceId(),
-        reaction: 'answered',
-        correct,
-        timeMs,
-      });
-    }
+    incrementCardsPlayed();
   };
 
   const handleNext = () => {
@@ -104,24 +88,12 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
 
   const handleSpecialNext = () => {
     setShowFeedback(true);
-    
-    if (currentCard) {
-      feedbackMutation.mutate({
-        cardId: currentCard.id,
-        deviceId: getDeviceId(),
-        reaction: 'viewed',
-      });
-    }
+    incrementCardsPlayed();
   };
 
   const handleFeedbackReaction = (reaction: string) => {
-    if (currentCard) {
-      feedbackMutation.mutate({
-        cardId: currentCard.id,
-        deviceId: getDeviceId(),
-        reaction,
-      });
-    }
+    // Feedback is now handled directly in QuizCard/SpecialCard components
+    // This function can remain empty or be used for additional logic
   };
 
   if (isLoading || selectedCategory === null) {
@@ -163,6 +135,8 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
             opzioneC={currentCard.opzioneC!}
             corretta={currentCard.corretta!}
             battuta={currentCard.battuta}
+            sessionId={sessionId}
+            deviceId={deviceId}
             onAnswer={handleAnswer}
             onFeedback={handleFeedbackReaction}
             onNext={handleNext}
@@ -174,6 +148,8 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
             categoria={currentCard.categoria}
             titolo={currentCard.domanda}
             descrizione={currentCard.battuta || "Carta speciale senza descrizione"}
+            sessionId={sessionId}
+            deviceId={deviceId}
             onNext={handleNext}
             onFeedback={handleFeedbackReaction}
             onBack={onBack}
