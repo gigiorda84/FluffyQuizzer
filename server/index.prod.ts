@@ -5,7 +5,7 @@ import { log } from "./utils";
 import path from "path";
 import fs from "fs";
 
-export const app = express();
+const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -39,43 +39,32 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// Initialize routes
+await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
 
-    res.status(status).json({ message });
-    throw err;
-  });
+  res.status(status).json({ message });
+  console.error(err);
+});
 
-  // Production static file serving
-  const distPath = path.resolve(import.meta.dirname, "public");
+// Production static file serving
+const distPath = path.resolve(import.meta.dirname, "public");
 
-  if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
-  }
+if (!fs.existsSync(distPath)) {
+  throw new Error(
+    `Could not find the build directory: ${distPath}, make sure to build the client first`,
+  );
+}
 
-  app.use(express.static(distPath));
+app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
-  });
+// fall through to index.html if the file doesn't exist
+app.use("*", (_req, res) => {
+  res.sendFile(path.resolve(distPath, "index.html"));
+});
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  const host = process.env.NODE_ENV === 'development' ? 'localhost' : '0.0.0.0';
-  server.listen(port, host, () => {
-    log(`serving on http://${host}:${port}`);
-  }).on('error', (err) => {
-    console.error('Server error:', err);
-    process.exit(1);
-  });
-})();
+// Export for Vercel serverless
+export default app;
