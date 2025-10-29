@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { CheckCircle, XCircle } from "lucide-react";
+import { useState, useRef } from "react";
+import { CheckCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface QuizCardProps {
   id: string;
@@ -27,11 +25,15 @@ export default function QuizCard({
   const [selectedOption, setSelectedOption] = useState<'A' | 'B' | 'C' | null>(null);
   const [showResult, setShowResult] = useState(false);
   const [startTime] = useState(Date.now());
-  const [selectedFeedback, setSelectedFeedback] = useState<string[]>([]);
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+  const [touchCurrent, setTouchCurrent] = useState<{ x: number, y: number } | null>(null);
 
   const handleAnswer = (option: 'A' | 'B' | 'C') => {
-    if (selectedOption) return; // Already answered
+    if (selectedOption) return;
 
     const timeMs = Date.now() - startTime;
     const isCorrect = option === corretta;
@@ -40,7 +42,6 @@ export default function QuizCard({
     setShowResult(true);
     onAnswer(option, isCorrect, timeMs);
 
-    // Record quiz answer in new quiz_answers table
     if (sessionId) {
       fetch('/api/quiz-answers', {
         method: 'POST',
@@ -57,46 +58,19 @@ export default function QuizCard({
     }
   };
 
-  const handleFeedbackClick = (reaction: string) => {
-    // Calculate new feedback state
-    let updatedFeedback = [...selectedFeedback];
+  const handleFeedbackSubmit = (liked: boolean) => {
+    if (feedbackGiven) return;
 
-    if (updatedFeedback.includes(reaction)) {
-      // Remove if already selected
-      updatedFeedback = updatedFeedback.filter(item => item !== reaction);
-    } else {
-      // Add the new reaction
-      updatedFeedback.push(reaction);
+    setFeedbackGiven(true);
+    setSwipeDirection(liked ? 'right' : 'left');
+    onFeedback(liked ? 'like' : 'dislike');
 
-      // Handle mutual exclusivity
-      if (reaction === 'easy' && updatedFeedback.includes('hard')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'hard');
-      } else if (reaction === 'hard' && updatedFeedback.includes('easy')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'easy');
-      } else if (reaction === 'fun' && updatedFeedback.includes('boring')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'boring');
-      } else if (reaction === 'boring' && updatedFeedback.includes('fun')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'fun');
-      }
-    }
-
-    // Update state
-    setSelectedFeedback(updatedFeedback);
-    onFeedback(reaction);
-
-    // Send feedback with new format (6 boolean fields)
     const feedbackData: any = {
       cardId: id,
       deviceId,
-      review: updatedFeedback.includes('review'),
-      top: updatedFeedback.includes('top'),
-      easy: updatedFeedback.includes('easy'),
-      hard: updatedFeedback.includes('hard'),
-      fun: updatedFeedback.includes('fun'),
-      boring: updatedFeedback.includes('boring')
+      liked
     };
 
-    // Only add sessionId if it exists
     if (sessionId) {
       feedbackData.sessionId = sessionId;
     }
@@ -106,6 +80,72 @@ export default function QuizCard({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(feedbackData)
     }).catch(err => console.error('Failed to save feedback:', err));
+
+    // Auto-advance after animation
+    setTimeout(() => {
+      if (onNext) onNext();
+    }, 800);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!showResult) return;
+    const touch = e.touches[0];
+    setTouchStart({ x: touch.clientX, y: touch.clientY });
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart || !showResult) return;
+    const touch = e.touches[0];
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchCurrent || !showResult) {
+      setTouchStart(null);
+      setTouchCurrent(null);
+      return;
+    }
+
+    const deltaX = touchCurrent.x - touchStart.x;
+    const deltaY = Math.abs(touchCurrent.y - touchStart.y);
+
+    // Require horizontal swipe (not vertical scroll)
+    if (Math.abs(deltaX) > 100 && deltaY < 50) {
+      if (deltaX > 0) {
+        // Swipe right = like
+        handleFeedbackSubmit(true);
+      } else {
+        // Swipe left = dislike
+        handleFeedbackSubmit(false);
+      }
+    }
+
+    setTouchStart(null);
+    setTouchCurrent(null);
+  };
+
+  const getSwipeTransform = () => {
+    if (swipeDirection) {
+      return swipeDirection === 'right'
+        ? 'translateX(100vw) rotate(20deg)'
+        : 'translateX(-100vw) rotate(-20deg)';
+    }
+    if (touchStart && touchCurrent && showResult) {
+      const deltaX = touchCurrent.x - touchStart.x;
+      const rotation = deltaX / 20;
+      return `translateX(${deltaX}px) rotate(${rotation}deg)`;
+    }
+    return 'translateX(0) rotate(0)';
+  };
+
+  const getSwipeOpacity = () => {
+    if (swipeDirection) return 0;
+    if (touchStart && touchCurrent && showResult) {
+      const deltaX = Math.abs(touchCurrent.x - touchStart.x);
+      return Math.max(0.3, 1 - deltaX / 300);
+    }
+    return 1;
   };
 
   const getCategoryStyles = (color: string) => {
@@ -113,43 +153,31 @@ export default function QuizCard({
       case 'verde':
         return {
           headerBg: 'bg-green-500',
-          footerBg: 'bg-green-500',
-          correctBg: 'bg-green-500',
           correctRing: 'ring-green-500'
         };
       case 'blu':
         return {
           headerBg: 'bg-blue-400',
-          footerBg: 'bg-blue-400',
-          correctBg: 'bg-blue-400',
           correctRing: 'ring-blue-400'
         };
       case 'arancione':
         return {
           headerBg: 'bg-orange-400',
-          footerBg: 'bg-orange-400',
-          correctBg: 'bg-orange-400',
           correctRing: 'ring-orange-400'
         };
       case 'viola':
         return {
           headerBg: 'bg-pink-400',
-          footerBg: 'bg-pink-400',
-          correctBg: 'bg-pink-400',
           correctRing: 'ring-pink-400'
         };
       case 'speciale':
         return {
           headerBg: 'bg-gradient-to-r from-orange-400 to-yellow-400',
-          footerBg: 'bg-gradient-to-r from-orange-400 to-yellow-400',
-          correctBg: 'bg-orange-400',
           correctRing: 'ring-orange-400'
         };
       default:
         return {
           headerBg: 'bg-green-500',
-          footerBg: 'bg-green-500',
-          correctBg: 'bg-green-500',
           correctRing: 'ring-green-500'
         };
     }
@@ -157,34 +185,27 @@ export default function QuizCard({
 
   const styles = getCategoryStyles(colore);
 
-  const getFeedbackButtonClass = (reaction: string) => {
-    const baseClass = "font-bold py-3 px-2 md:px-6 rounded-lg transition-all uppercase tracking-wider text-xs md:text-base text-center";
-
-    if (selectedFeedback.includes(reaction)) {
-      // Selected state - solid background with category color
-      return `${baseClass} bg-white text-black border-2 border-white`;
-    } else {
-      // Default state - transparent with white border
-      return `${baseClass} bg-transparent border-2 border-white text-white hover:bg-white hover:text-black`;
-    }
-  };
-
-
-
-
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="w-full bg-gray-100 min-h-screen flex flex-col">
-        {/* Header - Category colored section with Menu, Category, and Next button */}
+      <div
+        ref={cardRef}
+        className="w-full bg-gray-100 min-h-screen flex flex-col transition-all duration-700 ease-out"
+        style={{
+          transform: getSwipeTransform(),
+          opacity: getSwipeOpacity()
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Header */}
         <div className={`${styles.headerBg} px-6 py-4 flex justify-between items-center`}>
-          <div className="flex items-center">
-            <button
-              onClick={onBack}
-              className="text-white font-bold text-lg uppercase tracking-wider"
-            >
-              Menu
-            </button>
-          </div>
+          <button
+            onClick={onBack}
+            className="text-white font-bold text-lg uppercase tracking-wider"
+          >
+            Menu
+          </button>
           <div className="text-center">
             <div className="text-white font-bold text-lg uppercase tracking-wider">
               {categoria}
@@ -193,112 +214,65 @@ export default function QuizCard({
               #{id}
             </div>
           </div>
-          <div className="flex items-center">
-            {onNext && (
-              <button
-                onClick={onNext}
-                className="text-white font-bold text-lg uppercase tracking-wider"
-                data-testid="button-next-card"
-              >
-                Avanti
-              </button>
-            )}
-          </div>
+          <button
+            onClick={onNext}
+            className="text-white font-bold text-lg uppercase tracking-wider"
+            data-testid="button-next-card"
+          >
+            {showResult ? 'Avanti' : ''}
+          </button>
         </div>
 
-        {/* Main Card Content */}
+        {/* Main Content */}
         <div className="flex-1 bg-gray-100 flex flex-col px-8 py-6">
-          {/* Question Section - Fixed at top */}
+          {/* Question */}
           <div className="flex-shrink-0 mb-6">
             <h1 className="text-xl md:text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
               {domanda}
             </h1>
           </div>
 
-          {/* Answer Options - Centered in remaining space */}
+          {/* Answer Options */}
           <div className="flex-1 flex items-center justify-center">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl">
-              <div
-                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
-                  showResult && corretta === 'A'
-                    ? `ring-4 ${styles.correctRing}`
-                    : showResult && selectedOption === 'A' && corretta !== 'A'
-                    ? 'ring-4 ring-red-500'
-                    : selectedOption === 'A'
-                    ? 'ring-4 ring-blue-500'
-                    : ''
-                }`}
-                onClick={() => handleAnswer('A')}
-                data-testid="button-answer-a"
-              >
-                <div className="text-center">
-                  <div className="text-base font-bold leading-tight uppercase">
-                    {opzioneA}
-                  </div>
-                  {showResult && corretta === 'A' && (
-                    <CheckCircle className="w-6 h-6 mx-auto mt-2 text-green-400" />
-                  )}
-                  {showResult && selectedOption === 'A' && corretta !== 'A' && (
-                    <XCircle className="w-6 h-6 mx-auto mt-2 text-red-400" />
-                  )}
-                </div>
-              </div>
+              {['A', 'B', 'C'].map((opt) => {
+                const optionText = opt === 'A' ? opzioneA : opt === 'B' ? opzioneB : opzioneC;
+                const isCorrect = opt === corretta;
+                const isSelected = selectedOption === opt;
 
-              <div
-                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
-                  showResult && corretta === 'B'
-                    ? `ring-4 ${styles.correctRing}`
-                    : showResult && selectedOption === 'B' && corretta !== 'B'
-                    ? 'ring-4 ring-red-500'
-                    : selectedOption === 'B'
-                    ? 'ring-4 ring-blue-500'
-                    : ''
-                }`}
-                onClick={() => handleAnswer('B')}
-                data-testid="button-answer-b"
-              >
-                <div className="text-center">
-                  <div className="text-base font-bold leading-tight uppercase">
-                    {opzioneB}
+                return (
+                  <div
+                    key={opt}
+                    className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
+                      showResult && isCorrect
+                        ? `ring-4 ${styles.correctRing}`
+                        : showResult && isSelected && !isCorrect
+                        ? 'ring-4 ring-red-500'
+                        : isSelected
+                        ? 'ring-4 ring-blue-500'
+                        : ''
+                    }`}
+                    onClick={() => handleAnswer(opt as 'A' | 'B' | 'C')}
+                    data-testid={`button-answer-${opt.toLowerCase()}`}
+                  >
+                    <div className="text-center">
+                      <div className="text-base font-bold leading-tight uppercase">
+                        {optionText}
+                      </div>
+                      {showResult && isCorrect && (
+                        <CheckCircle className="w-6 h-6 mx-auto mt-2 text-green-400" />
+                      )}
+                      {showResult && isSelected && !isCorrect && (
+                        <XCircle className="w-6 h-6 mx-auto mt-2 text-red-400" />
+                      )}
+                    </div>
                   </div>
-                  {showResult && corretta === 'B' && (
-                    <CheckCircle className="w-6 h-6 mx-auto mt-2 text-green-400" />
-                  )}
-                  {showResult && selectedOption === 'B' && corretta !== 'B' && (
-                    <XCircle className="w-6 h-6 mx-auto mt-2 text-red-400" />
-                  )}
-                </div>
-              </div>
-
-              <div
-                className={`bg-black text-white py-4 px-6 rounded-3xl cursor-pointer transition-all hover:bg-gray-800 flex items-center justify-center ${
-                  showResult && corretta === 'C'
-                    ? `ring-4 ${styles.correctRing}`
-                    : showResult && selectedOption === 'C' && corretta !== 'C'
-                    ? 'ring-4 ring-red-500'
-                    : selectedOption === 'C'
-                    ? 'ring-4 ring-blue-500'
-                    : ''
-                }`}
-                onClick={() => handleAnswer('C')}
-                data-testid="button-answer-c"
-              >
-                <div className="text-center">
-                  <div className="text-base font-bold leading-tight uppercase">
-                    {opzioneC}
-                  </div>
-                  {showResult && corretta === 'C' && (
-                    <CheckCircle className="w-6 h-6 mx-auto mt-2 text-green-400" />
-                  )}
-                  {showResult && selectedOption === 'C' && corretta !== 'C' && (
-                    <XCircle className="w-6 h-6 mx-auto mt-2 text-red-400" />
-                  )}
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Comment Section - Below answers */}
+          {/* Comment */}
           {showResult && battuta && (
             <div className="flex-shrink-0 mt-6">
               <p className="text-base md:text-lg text-black font-bold leading-relaxed text-center">
@@ -308,68 +282,57 @@ export default function QuizCard({
           )}
         </div>
 
-        {/* Bottom Category-colored Section with Category Buttons */}
-        <div className={`${styles.footerBg} px-8 py-6`}>
-          <div className="grid grid-cols-3 gap-8">
-            {/* Column 1: REVIEW/TOP */}
-            <div className="flex flex-col gap-3">
+        {/* Feedback Section - Swipe or Tap */}
+        {showResult && !feedbackGiven && (
+          <div className="bg-gray-800 px-8 py-8">
+            <p className="text-white text-center text-lg mb-4">
+              Swipe ← left per 👎 o right → per 👍
+            </p>
+            <div className="flex justify-center gap-8">
               <button
-                className={getFeedbackButtonClass('review')}
-                onClick={() => handleFeedbackClick('review')}
-                data-testid="button-feedback-review"
+                onClick={() => handleFeedbackSubmit(false)}
+                className="flex flex-col items-center gap-2 p-6 rounded-2xl bg-red-500 hover:bg-red-600 transition-all transform hover:scale-110"
+                data-testid="button-feedback-dislike"
               >
-                REVIEW
+                <ThumbsDown className="w-12 h-12 text-white" />
+                <span className="text-white font-bold">Non mi piace</span>
               </button>
               <button
-                className={getFeedbackButtonClass('top')}
-                onClick={() => handleFeedbackClick('top')}
-                data-testid="button-feedback-top"
+                onClick={() => handleFeedbackSubmit(true)}
+                className="flex flex-col items-center gap-2 p-6 rounded-2xl bg-green-500 hover:bg-green-600 transition-all transform hover:scale-110"
+                data-testid="button-feedback-like"
               >
-                TOP
-              </button>
-            </div>
-
-            {/* Column 2: EASY/HARD */}
-            <div className="flex flex-col gap-3">
-              <button
-                className={getFeedbackButtonClass('easy')}
-                onClick={() => handleFeedbackClick('easy')}
-                data-testid="button-feedback-easy"
-              >
-                EASY
-              </button>
-              <button
-                className={getFeedbackButtonClass('hard')}
-                onClick={() => handleFeedbackClick('hard')}
-                data-testid="button-feedback-hard"
-              >
-                HARD
-              </button>
-            </div>
-
-            {/* Column 3: FUN/BORING */}
-            <div className="flex flex-col gap-3">
-              <button
-                className={getFeedbackButtonClass('fun')}
-                onClick={() => handleFeedbackClick('fun')}
-                data-testid="button-feedback-fun"
-              >
-                FUN
-              </button>
-              <button
-                className={getFeedbackButtonClass('boring')}
-                onClick={() => handleFeedbackClick('boring')}
-                data-testid="button-feedback-boring"
-              >
-                BORING
+                <ThumbsUp className="w-12 h-12 text-white" />
+                <span className="text-white font-bold">Mi piace</span>
               </button>
             </div>
           </div>
+        )}
 
-        </div>
-
-
+        {feedbackGiven && (
+          <div className="bg-gray-800 px-8 py-8 text-center">
+            <p className="text-white text-lg">
+              {swipeDirection === 'right' ? '👍 Grazie per il feedback!' : '👎 Grazie per il feedback!'}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Swipe indicators */}
+      {touchStart && touchCurrent && showResult && !feedbackGiven && (
+        <>
+          {touchCurrent.x - touchStart.x > 50 && (
+            <div className="fixed top-1/2 right-8 transform -translate-y-1/2 pointer-events-none z-50">
+              <ThumbsUp className="w-24 h-24 text-green-500 animate-pulse" />
+            </div>
+          )}
+          {touchStart.x - touchCurrent.x > 50 && (
+            <div className="fixed top-1/2 left-8 transform -translate-y-1/2 pointer-events-none z-50">
+              <ThumbsDown className="w-24 h-24 text-red-500 animate-pulse" />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

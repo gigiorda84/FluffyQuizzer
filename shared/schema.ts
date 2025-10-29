@@ -48,19 +48,14 @@ export const quizAnswers = pgTable("quiz_answers", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// User feedback table - tracks the 6 feedback options
+// User feedback table - simplified like/dislike
 export const feedback = pgTable("feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   cardId: varchar("card_id").notNull(),
   deviceId: varchar("device_id").notNull(),
   sessionId: varchar("session_id"), // optional link to session
-  // The 6 feedback types
-  review: boolean("review").notNull().default(false), // wants to review later
-  top: boolean("top").notNull().default(false), // top quality card
-  easy: boolean("easy").notNull().default(false), // too easy
-  hard: boolean("hard").notNull().default(false), // too difficult
-  fun: boolean("fun").notNull().default(false), // fun/entertaining
-  boring: boolean("boring").notNull().default(false), // boring/unengaging
+  // Simplified feedback: true = like (👍), false = dislike (👎)
+  liked: boolean("liked").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

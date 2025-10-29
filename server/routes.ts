@@ -386,14 +386,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           correctPercentage: 0,
           wrongPercentage: 0,
           avgResponseTime: 0,
-          // Feedback counts (the 6 options)
-          reviewCount: 0,
-          topCount: 0,
-          easyCount: 0,
-          hardCount: 0,
-          funCount: 0,
-          boringCount: 0,
-          totalFeedback: 0
+          // Simplified feedback: likes (👍) and dislikes (👎)
+          likeCount: 0,
+          dislikeCount: 0,
+          totalFeedback: 0,
+          likePercentage: 0
         });
       });
 
@@ -410,20 +407,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Process feedback
+      // Process feedback (simplified like/dislike)
       allFeedback.forEach(fb => {
         const stats = cardStatsMap.get(fb.cardId);
         if (stats) {
-          if (fb.review) stats.reviewCount++;
-          if (fb.top) stats.topCount++;
-          if (fb.easy) stats.easyCount++;
-          if (fb.hard) stats.hardCount++;
-          if (fb.fun) stats.funCount++;
-          if (fb.boring) stats.boringCount++;
-          // Count how many feedback options were selected in this feedback entry
-          const feedbackOptionsCount = [fb.review, fb.top, fb.easy, fb.hard, fb.fun, fb.boring]
-            .filter(Boolean).length;
-          stats.totalFeedback += feedbackOptionsCount;
+          if (fb.liked) {
+            stats.likeCount++;
+          } else {
+            stats.dislikeCount++;
+          }
+          stats.totalFeedback++;
         }
       });
 
@@ -434,13 +427,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stats.correctPercentage = Math.round((stats.correctAnswers / stats.totalAnswers) * 100);
             stats.wrongPercentage = Math.round((stats.wrongAnswers / stats.totalAnswers) * 100);
           }
+          if (stats.totalFeedback > 0) {
+            stats.likePercentage = Math.round((stats.likeCount / stats.totalFeedback) * 100);
+          }
           return stats;
         })
         .filter(stats => stats.totalFeedback >= 1 || stats.totalAnswers >= 1); // Show if at least 1 feedback/answer
 
-      // Sort by top votes (most voted cards)
-      const topVotedCards = [...cardStats]
-        .sort((a, b) => b.topCount - a.topCount)
+      // Sort by like count (most liked cards)
+      const mostLikedCards = [...cardStats]
+        .sort((a, b) => b.likeCount - a.likeCount)
         .slice(0, 10);
 
       // Sort by correct percentage
@@ -472,17 +468,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           overallCorrectPercentage,
           totalFeedbackEntries: allFeedback.length
         },
-        cardStats, // All cards with stats (filtered by minimum 2 feedback)
-        topVotedCards,
+        cardStats, // All cards with stats (filtered by minimum 1 feedback)
+        mostLikedCards,
         bestPerformingCards,
         mostDifficultCards,
         feedbackSummary: {
-          totalReview: allFeedback.reduce((sum, f) => sum + (f.review ? 1 : 0), 0),
-          totalTop: allFeedback.reduce((sum, f) => sum + (f.top ? 1 : 0), 0),
-          totalEasy: allFeedback.reduce((sum, f) => sum + (f.easy ? 1 : 0), 0),
-          totalHard: allFeedback.reduce((sum, f) => sum + (f.hard ? 1 : 0), 0),
-          totalFun: allFeedback.reduce((sum, f) => sum + (f.fun ? 1 : 0), 0),
-          totalBoring: allFeedback.reduce((sum, f) => sum + (f.boring ? 1 : 0), 0)
+          totalLikes: allFeedback.reduce((sum, f) => sum + (f.liked ? 1 : 0), 0),
+          totalDislikes: allFeedback.reduce((sum, f) => sum + (!f.liked ? 1 : 0), 0)
         }
       };
 

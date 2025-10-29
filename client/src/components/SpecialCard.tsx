@@ -1,5 +1,5 @@
-
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface SpecialCardProps {
   id: string;
@@ -14,44 +14,26 @@ interface SpecialCardProps {
 }
 
 export default function SpecialCard({ id, categoria, titolo, descrizione, sessionId, deviceId, onFeedback, onNext, onBack }: SpecialCardProps) {
-  const [selectedFeedback, setSelectedFeedback] = useState<string[]>([]);
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
 
-  const handleFeedbackClick = (reaction: string) => {
-    // Calculate new feedback state
-    let updatedFeedback = [...selectedFeedback];
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+  const [touchCurrent, setTouchCurrent] = useState<{ x: number, y: number } | null>(null);
 
-    if (updatedFeedback.includes(reaction)) {
-      // Remove if already selected
-      updatedFeedback = updatedFeedback.filter(item => item !== reaction);
-    } else {
-      // Add the new reaction
-      updatedFeedback.push(reaction);
+  const handleFeedbackSubmit = (liked: boolean) => {
+    if (feedbackGiven) return;
 
-      // Handle mutual exclusivity for FUN/BORING
-      if (reaction === 'fun' && updatedFeedback.includes('boring')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'boring');
-      } else if (reaction === 'boring' && updatedFeedback.includes('fun')) {
-        updatedFeedback = updatedFeedback.filter(item => item !== 'fun');
-      }
-    }
+    setFeedbackGiven(true);
+    setSwipeDirection(liked ? 'right' : 'left');
+    onFeedback(liked ? 'like' : 'dislike');
 
-    // Update state
-    setSelectedFeedback(updatedFeedback);
-    onFeedback(reaction);
-
-    // Send feedback with new format (6 boolean fields)
     const feedbackData: any = {
       cardId: id,
       deviceId,
-      review: updatedFeedback.includes('review'),
-      top: updatedFeedback.includes('top'),
-      easy: updatedFeedback.includes('easy'),
-      hard: updatedFeedback.includes('hard'),
-      fun: updatedFeedback.includes('fun'),
-      boring: updatedFeedback.includes('boring')
+      liked
     };
 
-    // Only add sessionId if it exists
     if (sessionId) {
       feedbackData.sessionId = sessionId;
     }
@@ -61,20 +43,94 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(feedbackData)
     }).catch(err => console.error('Failed to save feedback:', err));
+
+    // Auto-advance after animation
+    setTimeout(() => {
+      if (onNext) onNext();
+    }, 800);
   };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    setTouchStart({ x: touch.clientX, y: touch.clientY });
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const touch = e.touches[0];
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchCurrent) {
+      setTouchStart(null);
+      setTouchCurrent(null);
+      return;
+    }
+
+    const deltaX = touchCurrent.x - touchStart.x;
+    const deltaY = Math.abs(touchCurrent.y - touchStart.y);
+
+    // Require horizontal swipe (not vertical scroll)
+    if (Math.abs(deltaX) > 100 && deltaY < 50) {
+      if (deltaX > 0) {
+        // Swipe right = like
+        handleFeedbackSubmit(true);
+      } else {
+        // Swipe left = dislike
+        handleFeedbackSubmit(false);
+      }
+    }
+
+    setTouchStart(null);
+    setTouchCurrent(null);
+  };
+
+  const getSwipeTransform = () => {
+    if (swipeDirection) {
+      return swipeDirection === 'right'
+        ? 'translateX(100vw) rotate(20deg)'
+        : 'translateX(-100vw) rotate(-20deg)';
+    }
+    if (touchStart && touchCurrent) {
+      const deltaX = touchCurrent.x - touchStart.x;
+      const rotation = deltaX / 20;
+      return `translateX(${deltaX}px) rotate(${rotation}deg)`;
+    }
+    return 'translateX(0) rotate(0)';
+  };
+
+  const getSwipeOpacity = () => {
+    if (swipeDirection) return 0;
+    if (touchStart && touchCurrent) {
+      const deltaX = Math.abs(touchCurrent.x - touchStart.x);
+      return Math.max(0.3, 1 - deltaX / 300);
+    }
+    return 1;
+  };
+
   return (
     <div className="min-h-screen bg-gray-900">
-      <div className="w-full bg-gray-100 min-h-screen flex flex-col">
-        {/* Header - Category colored section with Menu, Category, and Next button */}
+      <div
+        ref={cardRef}
+        className="w-full bg-gray-100 min-h-screen flex flex-col transition-all duration-700 ease-out"
+        style={{
+          transform: getSwipeTransform(),
+          opacity: getSwipeOpacity()
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Header */}
         <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <button
-              onClick={onBack}
-              className="text-white font-bold text-lg uppercase tracking-wider"
-            >
-              Menu
-            </button>
-          </div>
+          <button
+            onClick={onBack}
+            className="text-white font-bold text-lg uppercase tracking-wider"
+          >
+            Menu
+          </button>
           <div className="text-center">
             <div className="text-white font-bold text-lg uppercase tracking-wider">
               {categoria}
@@ -83,17 +139,13 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
               #{id}
             </div>
           </div>
-          <div className="flex items-center">
-            {onNext && (
-              <button
-                onClick={onNext}
-                className="text-white font-bold text-lg uppercase tracking-wider"
-                data-testid="button-next-card"
-              >
-                Avanti
-              </button>
-            )}
-          </div>
+          <button
+            onClick={onNext}
+            className="text-white font-bold text-lg uppercase tracking-wider"
+            data-testid="button-next-card"
+          >
+            Avanti
+          </button>
         </div>
 
         {/* Main Card Content */}
@@ -113,63 +165,57 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
           </div>
         </div>
 
-        {/* Bottom Orange Section with Category Buttons */}
-        <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-8 py-6">
-          <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
-            {/* Column 1: REVIEW/TOP */}
-            <div className="flex flex-col gap-3">
+        {/* Feedback Section */}
+        {!feedbackGiven && (
+          <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-8 py-8">
+            <p className="text-white text-center text-lg mb-4">
+              Swipe ← left per 👎 o right → per 👍
+            </p>
+            <div className="flex justify-center gap-8">
               <button
-                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.includes('review')
-                    ? 'bg-white text-black'
-                    : 'bg-transparent text-white hover:bg-white hover:text-black'
-                }`}
-                onClick={() => handleFeedbackClick('review')}
-                data-testid="button-feedback-review"
+                onClick={() => handleFeedbackSubmit(false)}
+                className="flex flex-col items-center gap-2 p-6 rounded-2xl border-2 border-white bg-white/20 hover:bg-white/40 transition-all transform hover:scale-110"
+                data-testid="button-feedback-dislike"
               >
-                REVIEW
+                <ThumbsDown className="w-12 h-12 text-white" />
+                <span className="text-white font-bold">Non mi piace</span>
               </button>
               <button
-                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.includes('top')
-                    ? 'bg-white text-black'
-                    : 'bg-transparent text-white hover:bg-white hover:text-black'
-                }`}
-                onClick={() => handleFeedbackClick('top')}
-                data-testid="button-feedback-top"
+                onClick={() => handleFeedbackSubmit(true)}
+                className="flex flex-col items-center gap-2 p-6 rounded-2xl border-2 border-white bg-white/20 hover:bg-white/40 transition-all transform hover:scale-110"
+                data-testid="button-feedback-like"
               >
-                TOP
-              </button>
-            </div>
-
-            {/* Column 2: FUN/BORING */}
-            <div className="flex flex-col gap-3">
-              <button
-                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.includes('fun')
-                    ? 'bg-white text-black'
-                    : 'bg-transparent text-white hover:bg-white hover:text-black'
-                }`}
-                onClick={() => handleFeedbackClick('fun')}
-                data-testid="button-feedback-fun"
-              >
-                FUN
-              </button>
-              <button
-                className={`border-2 border-white font-bold py-3 px-6 rounded-lg transition-all uppercase tracking-wider ${
-                  selectedFeedback.includes('boring')
-                    ? 'bg-white text-black'
-                    : 'bg-transparent text-white hover:bg-white hover:text-black'
-                }`}
-                onClick={() => handleFeedbackClick('boring')}
-                data-testid="button-feedback-boring"
-              >
-                BORING
+                <ThumbsUp className="w-12 h-12 text-white" />
+                <span className="text-white font-bold">Mi piace</span>
               </button>
             </div>
           </div>
-        </div>
+        )}
+
+        {feedbackGiven && (
+          <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-8 py-8 text-center">
+            <p className="text-white text-lg">
+              {swipeDirection === 'right' ? '👍 Grazie per il feedback!' : '👎 Grazie per il feedback!'}
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Swipe indicators */}
+      {touchStart && touchCurrent && !feedbackGiven && (
+        <>
+          {touchCurrent.x - touchStart.x > 50 && (
+            <div className="fixed top-1/2 right-8 transform -translate-y-1/2 pointer-events-none z-50">
+              <ThumbsUp className="w-24 h-24 text-white animate-pulse drop-shadow-lg" />
+            </div>
+          )}
+          {touchStart.x - touchCurrent.x > 50 && (
+            <div className="fixed top-1/2 left-8 transform -translate-y-1/2 pointer-events-none z-50">
+              <ThumbsDown className="w-24 h-24 text-white animate-pulse drop-shadow-lg" />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
