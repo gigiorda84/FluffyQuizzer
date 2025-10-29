@@ -223,7 +223,7 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
                   </div>
                 ))}
                 {analytics.topVotedCards.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nessun dato disponibile (minimo 2 feedback richiesti)</p>
+                  <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
                 )}
               </div>
             </CardContent>
@@ -243,7 +243,7 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
                   </div>
                 ))}
                 {analytics.bestPerformingCards.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nessun dato disponibile (minimo 2 risposte richieste)</p>
+                  <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
                 )}
               </div>
             </CardContent>
@@ -263,7 +263,7 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
                   </div>
                 ))}
                 {analytics.mostDifficultCards.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nessun dato disponibile (minimo 2 risposte richieste)</p>
+                  <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
                 )}
               </div>
             </CardContent>
@@ -288,8 +288,6 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
             {sortedCards.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 Nessun dato disponibile. Inizia a giocare e fornire feedback per vedere le statistiche!
-                <br />
-                <span className="text-sm">(Sono richiesti almeno 2 feedback o 2 risposte per carta)</span>
               </p>
             ) : (
               <div className="overflow-x-auto">

@@ -427,7 +427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Calculate percentages and filter cards with minimum 2 feedback
+      // Calculate percentages and filter cards with minimum 1 feedback
       const cardStats = Array.from(cardStatsMap.values())
         .map(stats => {
           if (stats.totalAnswers > 0) {
@@ -436,7 +436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
           return stats;
         })
-        .filter(stats => stats.totalFeedback >= 2 || stats.totalAnswers >= 2); // Show only if at least 2 feedback/answers
+        .filter(stats => stats.totalFeedback >= 1 || stats.totalAnswers >= 1); // Show if at least 1 feedback/answer
 
       // Sort by top votes (most voted cards)
       const topVotedCards = [...cardStats]
@@ -445,13 +445,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Sort by correct percentage
       const bestPerformingCards = [...cardStats]
-        .filter(s => s.totalAnswers >= 2)
+        .filter(s => s.totalAnswers >= 1)
         .sort((a, b) => b.correctPercentage - a.correctPercentage)
         .slice(0, 10);
 
       // Sort by wrong percentage (most difficult)
       const mostDifficultCards = [...cardStats]
-        .filter(s => s.totalAnswers >= 2)
+        .filter(s => s.totalAnswers >= 1)
         .sort((a, b) => b.wrongPercentage - a.wrongPercentage)
         .slice(0, 10);
 
