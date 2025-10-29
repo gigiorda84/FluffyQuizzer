@@ -3,7 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, Star, ThumbsUp, Brain, Smile, Flag, Clock } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ThumbsUp, ThumbsDown, Filter } from 'lucide-react';
 
 interface AnalyticsProps {
   onBack?: () => void;
@@ -19,13 +21,10 @@ interface CardStats {
   wrongAnswers: number;
   correctPercentage: number;
   wrongPercentage: number;
-  reviewCount: number;
-  topCount: number;
-  easyCount: number;
-  hardCount: number;
-  funCount: number;
-  boringCount: number;
+  likeCount: number;
+  dislikeCount: number;
   totalFeedback: number;
+  likePercentage: number;
 }
 
 interface AnalyticsData {
@@ -38,25 +37,22 @@ interface AnalyticsData {
     totalFeedbackEntries: number;
   };
   cardStats: CardStats[];
-  topVotedCards: CardStats[];
+  mostLikedCards: CardStats[];
   bestPerformingCards: CardStats[];
   mostDifficultCards: CardStats[];
   feedbackSummary: {
-    totalReview: number;
-    totalTop: number;
-    totalEasy: number;
-    totalHard: number;
-    totalFun: number;
-    totalBoring: number;
+    totalLikes: number;
+    totalDislikes: number;
   };
 }
 
-type SortField = 'topCount' | 'correctPercentage' | 'wrongPercentage' | 'reviewCount' | 'funCount' | 'easyCount' | 'hardCount';
+type SortField = 'cardId' | 'question' | 'category' | 'totalAnswers' | 'correctAnswers' | 'wrongAnswers' | 'likeCount' | 'dislikeCount';
 type SortDirection = 'asc' | 'desc';
 
 export default function AnalyticsNew({ onBack }: AnalyticsProps) {
-  const [sortField, setSortField] = useState<SortField>('topCount');
+  const [sortField, setSortField] = useState<SortField>('likeCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   // Fetch analytics data
   const { data: analytics, isLoading, error } = useQuery({
@@ -77,11 +73,48 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
     }
   };
 
-  const sortedCards = analytics?.cardStats ? [...analytics.cardStats].sort((a, b) => {
+  // Filter and sort cards
+  const filteredCards = analytics?.cardStats
+    ? analytics.cardStats.filter(card =>
+        selectedCategories.length === 0 || selectedCategories.includes(card.category)
+      )
+    : [];
+
+  const sortedCards = filteredCards.length > 0 ? [...filteredCards].sort((a, b) => {
     const aValue = a[sortField];
     const bValue = b[sortField];
-    return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+
+    // Handle string sorting
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === 'asc'
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+
+    // Handle number sorting
+    return sortDirection === 'asc' ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue);
   }) : [];
+
+  // Get unique categories
+  const categories = analytics?.cardStats
+    ? Array.from(new Set(analytics.cardStats.map(c => c.category))).sort()
+    : [];
+
+  const toggleCategory = (category: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const selectAllCategories = () => {
+    setSelectedCategories([...categories]);
+  };
+
+  const deselectAllCategories = () => {
+    setSelectedCategories([]);
+  };
 
   if (isLoading) {
     return (
@@ -104,16 +137,15 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
 
   const SortButton = ({ field, label }: { field: SortField; label: string }) => (
     <Button
-      variant={sortField === field ? "default" : "outline"}
+      variant="ghost"
       size="sm"
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1"
+      className="h-6 w-6 p-0"
     >
-      {label}
-      {sortField === field && (
-        sortDirection === 'desc' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />
-      )}
-      {sortField !== field && <ArrowUpDown className="w-3 h-3" />}
+      {label && <span className="sr-only">{label}</span>}
+      {sortField === field && sortDirection === 'desc' && <ArrowDown className="w-4 h-4" />}
+      {sortField === field && sortDirection === 'asc' && <ArrowUp className="w-4 h-4" />}
+      {sortField !== field && <ArrowUpDown className="w-4 h-4 opacity-50" />}
     </Button>
   );
 
@@ -172,36 +204,16 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
             <CardTitle>Riepilogo Feedback</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
               <div className="text-center">
-                <Flag className="w-6 h-6 mx-auto mb-2 text-blue-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalReview}</div>
-                <div className="text-xs text-muted-foreground">Da Rivedere</div>
+                <ThumbsUp className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <div className="text-3xl font-bold">{analytics.feedbackSummary.totalLikes}</div>
+                <div className="text-sm text-muted-foreground">Mi Piace 👍</div>
               </div>
               <div className="text-center">
-                <Star className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalTop}</div>
-                <div className="text-xs text-muted-foreground">Top</div>
-              </div>
-              <div className="text-center">
-                <ThumbsUp className="w-6 h-6 mx-auto mb-2 text-green-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalEasy}</div>
-                <div className="text-xs text-muted-foreground">Facile</div>
-              </div>
-              <div className="text-center">
-                <Brain className="w-6 h-6 mx-auto mb-2 text-red-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalHard}</div>
-                <div className="text-xs text-muted-foreground">Difficile</div>
-              </div>
-              <div className="text-center">
-                <Smile className="w-6 h-6 mx-auto mb-2 text-purple-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalFun}</div>
-                <div className="text-xs text-muted-foreground">Divertente</div>
-              </div>
-              <div className="text-center">
-                <Clock className="w-6 h-6 mx-auto mb-2 text-gray-500" />
-                <div className="text-2xl font-bold">{analytics.feedbackSummary.totalBoring}</div>
-                <div className="text-xs text-muted-foreground">Noiosa</div>
+                <ThumbsDown className="w-8 h-8 mx-auto mb-2 text-red-500" />
+                <div className="text-3xl font-bold">{analytics.feedbackSummary.totalDislikes}</div>
+                <div className="text-sm text-muted-foreground">Non Mi Piace 👎</div>
               </div>
             </div>
           </CardContent>
@@ -211,18 +223,18 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">🌟 Carte Più Votate</CardTitle>
+              <CardTitle className="text-lg">👍 Carte Più Piaciute</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {analytics.topVotedCards.slice(0, 5).map((card, index) => (
+                {analytics.mostLikedCards?.slice(0, 5).map((card, index) => (
                   <div key={card.cardId} className="flex items-center gap-2 text-sm">
                     <Badge variant="outline">{index + 1}</Badge>
                     <span className="flex-1 truncate">{card.question.substring(0, 40)}...</span>
-                    <Badge>{card.topCount}</Badge>
+                    <Badge className="bg-green-500">{card.likeCount} 👍</Badge>
                   </div>
                 ))}
-                {analytics.topVotedCards.length === 0 && (
+                {(!analytics.mostLikedCards || analytics.mostLikedCards.length === 0) && (
                   <p className="text-sm text-muted-foreground">Nessun dato disponibile</p>
                 )}
               </div>
@@ -273,15 +285,51 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
         {/* Sortable Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Tutte le Carte - Statistiche Dettagliate</CardTitle>
-            <div className="flex flex-wrap gap-2 mt-4">
-              <SortButton field="topCount" label="Top" />
-              <SortButton field="correctPercentage" label="% Corrette" />
-              <SortButton field="wrongPercentage" label="% Sbagliate" />
-              <SortButton field="reviewCount" label="Da Rivedere" />
-              <SortButton field="funCount" label="Divertenti" />
-              <SortButton field="easyCount" label="Facili" />
-              <SortButton field="hardCount" label="Difficili" />
+            <div className="flex items-center justify-between">
+              <CardTitle>Tutte le Carte - Statistiche Dettagliate</CardTitle>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Filter className="w-4 h-4 mr-2" />
+                    Filtra Categorie
+                    {selectedCategories.length > 0 && (
+                      <Badge variant="secondary" className="ml-2">{selectedCategories.length}</Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80" align="end">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">Seleziona Categorie</h4>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={selectAllCategories}>
+                          Tutte
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={deselectAllCategories}>
+                          Nessuna
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {categories.map(category => (
+                        <div key={category} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={() => toggleCategory(category)}
+                          />
+                          <label
+                            htmlFor={`category-${category}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {category}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
           </CardHeader>
           <CardContent>
@@ -292,43 +340,79 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b">
+                  <thead className="border-b bg-muted/50">
                     <tr className="text-left">
-                      <th className="p-2">ID</th>
-                      <th className="p-2">Domanda</th>
-                      <th className="p-2">Categoria</th>
-                      <th className="p-2 text-center">Risposte</th>
-                      <th className="p-2 text-center">% OK</th>
-                      <th className="p-2 text-center">% KO</th>
-                      <th className="p-2 text-center">⭐ Top</th>
-                      <th className="p-2 text-center">😊 Fun</th>
-                      <th className="p-2 text-center">👍 Easy</th>
-                      <th className="p-2 text-center">🧠 Hard</th>
-                      <th className="p-2 text-center">📌 Review</th>
+                      <th className="p-3 font-bold text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>Codice</span>
+                          {SortButton('cardId', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>Domanda</span>
+                          {SortButton('question', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm">
+                        <div className="flex items-center gap-2">
+                          <span>Categoria</span>
+                          {SortButton('category', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>Risposte</span>
+                          {SortButton('totalAnswers', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>OK</span>
+                          {SortButton('correctAnswers', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>KO</span>
+                          {SortButton('wrongAnswers', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>Like</span>
+                          {SortButton('likeCount', '')}
+                        </div>
+                      </th>
+                      <th className="p-3 font-bold text-sm text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <span>Dislike</span>
+                          {SortButton('dislikeCount', '')}
+                        </div>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {sortedCards.map((card) => (
                       <tr key={card.cardId} className="border-b hover:bg-muted/50">
-                        <td className="p-2">
-                          <Badge variant="secondary" className="text-xs font-mono">{card.cardId}</Badge>
-                        </td>
-                        <td className="p-2 max-w-xs truncate">{card.question}</td>
+                        <td className="p-2 font-mono text-xs">{card.cardId}</td>
+                        <td className="p-2 max-w-md truncate">{card.question}</td>
                         <td className="p-2">
                           <Badge variant="outline" className="text-xs">{card.category}</Badge>
                         </td>
-                        <td className="p-2 text-center">{card.totalAnswers}</td>
+                        <td className="p-2 text-center font-semibold">{card.totalAnswers}</td>
                         <td className="p-2 text-center">
-                          <span className="text-green-600 font-semibold">{card.correctPercentage}%</span>
+                          <span className="text-green-600 font-semibold">{card.correctAnswers}</span>
                         </td>
                         <td className="p-2 text-center">
-                          <span className="text-red-600 font-semibold">{card.wrongPercentage}%</span>
+                          <span className="text-red-600 font-semibold">{card.wrongAnswers}</span>
                         </td>
-                        <td className="p-2 text-center">{card.topCount}</td>
-                        <td className="p-2 text-center">{card.funCount}</td>
-                        <td className="p-2 text-center">{card.easyCount}</td>
-                        <td className="p-2 text-center">{card.hardCount}</td>
-                        <td className="p-2 text-center">{card.reviewCount}</td>
+                        <td className="p-2 text-center">
+                          <span className="text-green-600 font-semibold">{card.likeCount}</span>
+                        </td>
+                        <td className="p-2 text-center">
+                          <span className="text-red-600 font-semibold">{card.dislikeCount}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

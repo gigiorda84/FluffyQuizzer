@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 
 interface SpecialCardProps {
@@ -21,11 +21,15 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
   const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
   const [touchCurrent, setTouchCurrent] = useState<{ x: number, y: number } | null>(null);
 
+  // Reset feedback state when card changes
+  useEffect(() => {
+    setFeedbackGiven(false);
+  }, [id]);
+
   const handleFeedbackSubmit = (liked: boolean) => {
     if (feedbackGiven) return;
 
     setFeedbackGiven(true);
-    setSwipeDirection(liked ? 'right' : 'left');
     onFeedback(liked ? 'like' : 'dislike');
 
     const feedbackData: any = {
@@ -44,10 +48,8 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
       body: JSON.stringify(feedbackData)
     }).catch(err => console.error('Failed to save feedback:', err));
 
-    // Auto-advance after animation
-    setTimeout(() => {
-      if (onNext) onNext();
-    }, 800);
+    // Auto-advance immediately without animation
+    if (onNext) onNext();
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -114,11 +116,7 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
     <div className="min-h-screen bg-gray-900">
       <div
         ref={cardRef}
-        className="w-full bg-gray-100 min-h-screen flex flex-col transition-all duration-700 ease-out"
-        style={{
-          transform: getSwipeTransform(),
-          opacity: getSwipeOpacity()
-        }}
+        className="w-full bg-gray-100 min-h-screen flex flex-col"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -167,55 +165,28 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
 
         {/* Feedback Section */}
         {!feedbackGiven && (
-          <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-8 py-8">
-            <p className="text-white text-center text-lg mb-4">
-              Swipe ← left per 👎 o right → per 👍
-            </p>
+          <div className="px-8 py-8">
             <div className="flex justify-center gap-8">
               <button
                 onClick={() => handleFeedbackSubmit(false)}
-                className="flex flex-col items-center gap-2 p-6 rounded-2xl border-2 border-white bg-white/20 hover:bg-white/40 transition-all transform hover:scale-110"
+                className="flex items-center justify-center p-6 rounded-full bg-red-500 hover:bg-red-600 transition-all transform hover:scale-110"
                 data-testid="button-feedback-dislike"
               >
                 <ThumbsDown className="w-12 h-12 text-white" />
-                <span className="text-white font-bold">Non mi piace</span>
               </button>
               <button
                 onClick={() => handleFeedbackSubmit(true)}
-                className="flex flex-col items-center gap-2 p-6 rounded-2xl border-2 border-white bg-white/20 hover:bg-white/40 transition-all transform hover:scale-110"
+                className="flex items-center justify-center p-6 rounded-full bg-green-500 hover:bg-green-600 transition-all transform hover:scale-110"
                 data-testid="button-feedback-like"
               >
                 <ThumbsUp className="w-12 h-12 text-white" />
-                <span className="text-white font-bold">Mi piace</span>
               </button>
             </div>
           </div>
         )}
 
-        {feedbackGiven && (
-          <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-8 py-8 text-center">
-            <p className="text-white text-lg">
-              {swipeDirection === 'right' ? '👍 Grazie per il feedback!' : '👎 Grazie per il feedback!'}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Swipe indicators */}
-      {touchStart && touchCurrent && !feedbackGiven && (
-        <>
-          {touchCurrent.x - touchStart.x > 50 && (
-            <div className="fixed top-1/2 right-8 transform -translate-y-1/2 pointer-events-none z-50">
-              <ThumbsUp className="w-24 h-24 text-white animate-pulse drop-shadow-lg" />
-            </div>
-          )}
-          {touchStart.x - touchCurrent.x > 50 && (
-            <div className="fixed top-1/2 left-8 transform -translate-y-1/2 pointer-events-none z-50">
-              <ThumbsDown className="w-24 h-24 text-white animate-pulse drop-shadow-lg" />
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }

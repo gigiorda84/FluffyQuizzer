@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, SkipForward, RefreshCw } from "lucide-react";
 import QuizCard from "./QuizCard";
@@ -26,14 +26,14 @@ interface Card {
 interface GameScreenProps {
   selectedCategory?: string | null;
   onBack: () => void;
-  onCmsLogin: () => void;
 }
 
-export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: GameScreenProps) {
+export default function GameScreen({ selectedCategory, onBack }: GameScreenProps) {
   const [showFeedback, setShowFeedback] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For forcing re-fetch
   const { sessionId, deviceId, incrementCardsPlayed } = useGameSession();
+  const queryClient = useQueryClient();
 
   // Fetch random card (optionally filtered by category)
   const { data: currentCard, isLoading, error, refetch } = useQuery({
@@ -74,6 +74,28 @@ export default function GameScreen({ selectedCategory, onBack, onCmsLogin }: Gam
     setShowFeedback(false);
     setAnswered(false);
   }, [cardKey]);
+
+  // Prefetch next card
+  useEffect(() => {
+    if (currentCard && selectedCategory !== null) {
+      // Prefetch the next card in background
+      const nextKey = cardKey + 1;
+      const url = selectedCategory && selectedCategory !== 'mix'
+        ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
+        : '/api/cards/random';
+
+      queryClient.prefetchQuery({
+        queryKey: ['cards', 'random', selectedCategory || 'all', nextKey],
+        queryFn: async (): Promise<Card> => {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error('Failed to fetch card');
+          }
+          return response.json();
+        },
+      });
+    }
+  }, [currentCard, cardKey, selectedCategory, queryClient]);
 
   const handleAnswer = (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => {
     setAnswered(true);

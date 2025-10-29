@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -42,12 +42,12 @@ const categories = [
 
 // Mock cards removed - now using real API data
 
-type AppScreen = 'home' | 'game' | 'cms-login' | 'cms-table' | 'analytics';
+type AppScreen = 'home' | 'game';
+type CmsScreen = 'login' | 'table' | 'analytics';
 
-function Router() {
+function HomeRouter() {
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Game logic
   const handleSelectCategory = (categoryId: string) => {
@@ -60,18 +60,36 @@ function Router() {
     setCurrentScreen('game');
   };
 
-  // Category filtering now handled by API - removed filtering logic
+  return (
+    <>
+      {currentScreen === 'home' && (
+        <CategorySelector
+          categories={categories}
+          onSelectCategory={handleSelectCategory}
+          onSelectMix={handleSelectMix}
+        />
+      )}
 
-  // CMS logic
-  const handleCmsLogin = () => {
-    setCurrentScreen('cms-login');
-  };
+      {currentScreen === 'game' && (
+        <GameScreen
+          selectedCategory={selectedCategory}
+          onBack={() => setCurrentScreen('home')}
+        />
+      )}
+    </>
+  );
+}
+
+function CmsRouter() {
+  const [, setLocation] = useLocation();
+  const [currentScreen, setCurrentScreen] = useState<CmsScreen>('login');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleLogin = (username: string, password: string) => {
     // Simple demo login - todo: remove mock functionality
-    if (username === 'admin' && password === 'admin') {
+    if (username === 'admin' && password === 'VJG7Il93z4QAdV7EH') {
       setIsLoggedIn(true);
-      setCurrentScreen('cms-table');
+      setCurrentScreen('table');
     } else {
       console.error('Login failed');
     }
@@ -79,51 +97,40 @@ function Router() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    setCurrentScreen('home');
+    setCurrentScreen('login');
+    setLocation('/');
   };
 
-  // Feedback now handled directly in GameScreen component via API
+  return (
+    <>
+      {currentScreen === 'login' && (
+        <CmsLogin
+          onLogin={handleLogin}
+          onBack={() => setLocation('/')}
+        />
+      )}
 
+      {currentScreen === 'table' && isLoggedIn && (
+        <CmsTable
+          onLogout={handleLogout}
+          onAnalytics={() => setCurrentScreen('analytics')}
+        />
+      )}
+
+      {currentScreen === 'analytics' && isLoggedIn && (
+        <Analytics
+          onBack={() => setCurrentScreen('table')}
+        />
+      )}
+    </>
+  );
+}
+
+function Router() {
   return (
     <Switch>
-      <Route path="/">
-        {currentScreen === 'home' && (
-          <CategorySelector
-            categories={categories}
-            onSelectCategory={handleSelectCategory}
-            onSelectMix={handleSelectMix}
-            onCmsLogin={handleCmsLogin}
-          />
-        )}
-        
-        {currentScreen === 'game' && (
-          <GameScreen
-            selectedCategory={selectedCategory}
-            onBack={() => setCurrentScreen('home')}
-            onCmsLogin={handleCmsLogin}
-          />
-        )}
-        
-        {currentScreen === 'cms-login' && (
-          <CmsLogin
-            onLogin={handleLogin}
-            onBack={() => setCurrentScreen('home')}
-          />
-        )}
-        
-        {currentScreen === 'cms-table' && isLoggedIn && (
-          <CmsTable
-            onLogout={handleLogout}
-            onAnalytics={() => setCurrentScreen('analytics')}
-          />
-        )}
-        
-        {currentScreen === 'analytics' && isLoggedIn && (
-          <Analytics
-            onBack={() => setCurrentScreen('cms-table')}
-          />
-        )}
-      </Route>
+      <Route path="/" component={HomeRouter} />
+      <Route path="/cms" component={CmsRouter} />
       <Route component={NotFound} />
     </Switch>
   );

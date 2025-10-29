@@ -15,10 +15,9 @@ interface CategorySelectorProps {
   categories: Category[];
   onSelectCategory: (categoryId: string) => void;
   onSelectMix: () => void;
-  onCmsLogin?: () => void;
 }
 
-export default function CategorySelector({ categories, onSelectCategory, onSelectMix, onCmsLogin }: CategorySelectorProps) {
+export default function CategorySelector({ categories, onSelectCategory, onSelectMix }: CategorySelectorProps) {
   const [isInstructionsOpen, setIsInstructionsOpen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -156,17 +155,6 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
           >
             <h3 className="text-2xl font-bold text-center uppercase tracking-wider">GIOCA</h3>
           </div>
-
-          {/* EDITOR Button */}
-          {onCmsLogin && (
-            <div
-              className="bg-black text-white px-12 py-6 rounded-3xl cursor-pointer hover:bg-gray-800 transition-all shadow-lg border-4 border-white w-72"
-              onClick={onCmsLogin}
-              data-testid="button-cms-login"
-            >
-              <h3 className="text-2xl font-bold text-center uppercase tracking-wider">EDITOR</h3>
-            </div>
-          )}
         </div>
 
       </div>
