@@ -235,7 +235,7 @@ export default function QuizCard({
         {/* Main Content */}
         <div className="flex-1 bg-gray-100 flex flex-col px-6 py-3 md:px-8 md:py-6">
           {/* Question */}
-          <div className="flex-shrink-0 mb-3 md:mb-6">
+          <div className="flex-shrink-0 mt-6 md:mt-8 mb-3 md:mb-6">
             <h1 className="text-xl md:text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
               {domanda}
             </h1>
