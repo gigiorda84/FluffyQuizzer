@@ -37,6 +37,9 @@ export default function QuizCard({
     setSelectedOption(null);
     setShowResult(false);
     setFeedbackGiven(false);
+    setSwipeDirection(null);
+    setTouchStart(null);
+    setTouchCurrent(null);
   }, [id]);
 
   const handleAnswer = (option: 'A' | 'B' | 'C') => {
@@ -87,8 +90,13 @@ export default function QuizCard({
       body: JSON.stringify(feedbackData)
     }).catch(err => console.error('Failed to save feedback:', err));
 
-    // Auto-advance immediately without animation
-    if (onNext) onNext();
+    // Trigger Tinder-style swipe animation
+    setSwipeDirection(liked ? 'right' : 'left');
+
+    // Wait for animation to complete before advancing
+    setTimeout(() => {
+      if (onNext) onNext();
+    }, 300);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -122,10 +130,11 @@ export default function QuizCard({
         // Swipe left = dislike
         handleFeedbackSubmit(false);
       }
+    } else {
+      // Reset position if swipe was not completed
+      setTouchStart(null);
+      setTouchCurrent(null);
     }
-
-    setTouchStart(null);
-    setTouchCurrent(null);
   };
 
   const getSwipeTransform = () => {
@@ -192,7 +201,11 @@ export default function QuizCard({
     <div className="min-h-screen bg-gray-900">
       <div
         ref={cardRef}
-        className="w-full bg-gray-100 min-h-screen flex flex-col"
+        className="w-full bg-gray-100 min-h-screen flex flex-col transition-all duration-300 ease-out"
+        style={{
+          transform: getSwipeTransform(),
+          opacity: getSwipeOpacity()
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
