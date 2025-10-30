@@ -32,8 +32,10 @@ export default function QuizCard({
   const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
   const [touchCurrent, setTouchCurrent] = useState<{ x: number, y: number } | null>(null);
 
-  // Reset feedback state when card changes
+  // Reset state when card changes
   useEffect(() => {
+    setSelectedOption(null);
+    setShowResult(false);
     setFeedbackGiven(false);
   }, [id]);
 
