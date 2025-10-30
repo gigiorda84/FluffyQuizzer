@@ -292,7 +292,7 @@ export default function QuizCard({
 
           {/* Feedback Section - Swipe or Tap */}
           {!feedbackGiven && (
-            <div className="flex-shrink-0 mt-4 md:mt-6">
+            <div className="flex-shrink-0 mt-4 md:mt-6 mb-12 md:mb-16">
               <div className="flex justify-center gap-8">
                 <button
                   onClick={() => handleFeedbackSubmit(false)}
