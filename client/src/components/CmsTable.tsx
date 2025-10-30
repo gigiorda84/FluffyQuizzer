@@ -48,10 +48,11 @@ interface Card {
 interface CmsTableProps {
   onLogout: () => void;
   onAnalytics?: () => void;
+  adminPassword: string;
 }
 
 export default function CmsTable({
-  onLogout, onAnalytics
+  onLogout, onAnalytics, adminPassword
 }: CmsTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -285,6 +286,9 @@ export default function CmsTable({
       try {
         const response = await fetch('/api/admin/import-csv', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${adminPassword}`
+          },
           body: formData
         });
 

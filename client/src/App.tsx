@@ -84,11 +84,13 @@ function CmsRouter() {
   const [, setLocation] = useLocation();
   const [currentScreen, setCurrentScreen] = useState<CmsScreen>('login');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminPassword, setAdminPassword] = useState<string>('');
 
   const handleLogin = (username: string, password: string) => {
     // Simple demo login - todo: remove mock functionality
     if (username === 'admin' && password === 'VJG7Il93z4QAdV7EH') {
       setIsLoggedIn(true);
+      setAdminPassword(password);
       setCurrentScreen('table');
     } else {
       console.error('Login failed');
@@ -97,6 +99,7 @@ function CmsRouter() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setAdminPassword('');
     setCurrentScreen('login');
     setLocation('/');
   };
@@ -114,6 +117,7 @@ function CmsRouter() {
         <CmsTable
           onLogout={handleLogout}
           onAnalytics={() => setCurrentScreen('analytics')}
+          adminPassword={adminPassword}
         />
       )}
 

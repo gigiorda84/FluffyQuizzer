@@ -34,6 +34,8 @@ export const gameSessions = pgTable("game_sessions", {
   startedAt: timestamp("started_at").defaultNow(),
   endedAt: timestamp("ended_at"),
   cardsPlayed: integer("cards_played").notNull().default(0),
+  feedbackCount: integer("feedback_count").notNull().default(0),
+  durationMs: integer("duration_ms"), // session duration in milliseconds
 });
 
 // Quiz answers table - tracks every quiz answer

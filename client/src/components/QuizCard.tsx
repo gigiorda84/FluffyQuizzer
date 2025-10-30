@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { CheckCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { CheckCircle, XCircle, ThumbsUp, ThumbsDown, ArrowLeft, ArrowRight } from "lucide-react";
 
 interface QuizCardProps {
   id: string;
@@ -211,31 +211,31 @@ export default function QuizCard({
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className={`${styles.headerBg} px-6 py-2 md:py-4 flex justify-between items-center`}>
+        <div className={`${styles.headerBg} px-6 py-4 md:py-4 flex justify-between items-center`}>
           <button
             onClick={onBack}
-            className="text-white font-bold text-lg uppercase tracking-wider"
+            className="text-white font-bold w-10 h-10 flex items-center justify-center"
           >
-            Menu
+            <ArrowLeft className="w-6 h-6" />
           </button>
-          <div className="text-center">
+          <div className="flex-1 text-center">
             <div className="text-white font-bold text-lg uppercase tracking-wider">
               {categoria}
             </div>
           </div>
           <button
             onClick={onNext}
-            className="text-white font-bold text-lg uppercase tracking-wider"
+            className="text-white font-bold w-10 h-10 flex items-center justify-center"
             data-testid="button-next-card"
           >
-            {showResult ? 'Avanti' : ''}
+            <ArrowRight className={`w-6 h-6 ${showResult ? '' : 'opacity-0'}`} />
           </button>
         </div>
 
         {/* Main Content */}
         <div className="flex-1 bg-gray-100 flex flex-col px-6 py-3 md:px-8 md:py-6">
           {/* Question */}
-          <div className="flex-shrink-0 mt-6 md:mt-8 mb-3 md:mb-6">
+          <div className="flex-shrink-0 mt-8 md:mt-8 mb-3 md:mb-6">
             <h1 className="text-xl md:text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
               {domanda}
             </h1>
@@ -243,7 +243,7 @@ export default function QuizCard({
 
           {/* Answer Options */}
           <div className="flex-1 flex items-center justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-4 w-full max-w-5xl">
               {['A', 'B', 'C'].map((opt) => {
                 const optionText = opt === 'A' ? opzioneA : opt === 'B' ? opzioneB : opzioneC;
                 const isCorrect = opt === corretta;
@@ -283,7 +283,7 @@ export default function QuizCard({
 
           {/* Comment */}
           {showResult && battuta && (
-            <div className="flex-shrink-0 mt-3 md:mt-6">
+            <div className="flex-shrink-0 mt-0 md:mt-6">
               <p className="text-base md:text-lg text-black font-bold leading-relaxed text-center">
                 {battuta}
               </p>
@@ -292,8 +292,8 @@ export default function QuizCard({
 
           {/* Feedback Section - Swipe or Tap */}
           {!feedbackGiven && (
-            <div className="flex-shrink-0 mt-4 md:mt-6 mb-12 md:mb-16">
-              <div className="flex justify-center gap-8">
+            <div className="flex-shrink-0 mt-4 md:mt-6 mb-16 md:mb-8">
+              <div className="flex justify-center gap-24">
                 <button
                   onClick={() => handleFeedbackSubmit(false)}
                   className="flex items-center justify-center p-4 md:p-6 rounded-full bg-red-500 hover:bg-red-600 transition-all transform hover:scale-110"

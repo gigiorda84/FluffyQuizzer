@@ -11,6 +11,8 @@ export function useGameSession() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
   const sessionStarted = useRef(false);
+  const sessionStartTime = useRef<number>(0);
+  const feedbackCountRef = useRef<number>(0);
 
   useEffect(() => {
     // Get or create device ID
@@ -37,12 +39,16 @@ export function useGameSession() {
 
   const startSession = async (deviceId: string) => {
     try {
+      sessionStartTime.current = Date.now();
+      feedbackCountRef.current = 0;
+
       const response = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           deviceId,
-          cardsPlayed: 0
+          cardsPlayed: 0,
+          feedbackCount: 0
         })
       });
 
@@ -60,11 +66,17 @@ export function useGameSession() {
     if (!sessionId) return;
 
     try {
+      const durationMs = sessionStartTime.current > 0
+        ? Date.now() - sessionStartTime.current
+        : null;
+
       await fetch(`/api/sessions/${sessionId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          endedAt: new Date().toISOString()
+          endedAt: new Date().toISOString(),
+          durationMs,
+          feedbackCount: feedbackCountRef.current
         })
       });
       localStorage.removeItem('currentSessionId');
@@ -94,10 +106,29 @@ export function useGameSession() {
     }
   };
 
+  const incrementFeedbackCount = async () => {
+    if (!sessionId) return;
+
+    feedbackCountRef.current += 1;
+
+    try {
+      await fetch(`/api/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedbackCount: feedbackCountRef.current
+        })
+      });
+    } catch (error) {
+      console.error('Failed to increment feedback count:', error);
+    }
+  };
+
   return {
     sessionId,
     deviceId,
     incrementCardsPlayed,
+    incrementFeedbackCount,
     endSession
   };
 }

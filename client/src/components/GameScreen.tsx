@@ -32,7 +32,7 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
   const [showFeedback, setShowFeedback] = useState(false);
   const [answered, setAnswered] = useState(false);
   const [cardKey, setCardKey] = useState(0); // For forcing re-fetch
-  const { sessionId, deviceId, incrementCardsPlayed } = useGameSession();
+  const { sessionId, deviceId, incrementCardsPlayed, incrementFeedbackCount } = useGameSession();
   const queryClient = useQueryClient();
 
   // Fetch random card (optionally filtered by category)

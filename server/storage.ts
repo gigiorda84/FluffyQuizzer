@@ -52,6 +52,7 @@ export interface IStorage {
   // Quiz Answer methods
   createQuizAnswer(answer: InsertQuizAnswer): Promise<QuizAnswer>;
   getQuizAnswersBySession(sessionId: string): Promise<QuizAnswer[]>;
+  deleteAllQuizAnswers(): Promise<number>;
   getQuizAnswersByCard(cardId: string): Promise<QuizAnswer[]>;
   getAllQuizAnswers(): Promise<QuizAnswer[]>;
 }
@@ -194,6 +195,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAllFeedback(): Promise<number> {
     const result = await db.delete(feedback);
+    return result.rowCount || 0;
+  }
+
+  async deleteAllQuizAnswers(): Promise<number> {
+    const result = await db.delete(quizAnswers);
     return result.rowCount || 0;
   }
 

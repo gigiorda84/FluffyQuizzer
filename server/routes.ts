@@ -361,6 +361,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all quiz answers (Admin only)
+  app.delete("/api/quiz-answers/delete-all", async (req, res) => {
+    try {
+      const deletedCount = await storage.deleteAllQuizAnswers();
+      res.json({
+        message: `Successfully deleted ${deletedCount} quiz answer entries`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error("Error deleting all quiz answers:", error);
+      res.status(500).json({ error: "Failed to delete all quiz answers" });
+    }
+  });
+
   // ============ ANALYTICS API ============
 
   // Get analytics data with aggregations
@@ -520,8 +534,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import cards from CSV (DISABLED in production for security)
+  // Import cards from CSV (Protected by authentication)
   app.post("/api/admin/import-csv", (req, res, next) => {
+    // Check authentication header
+    const authHeader = req.headers.authorization;
+    const expectedPassword = process.env.ADMIN_PASSWORD || 'VJG7Il93z4QAdV7EH';
+
+    if (!authHeader || authHeader !== `Bearer ${expectedPassword}`) {
+      return res.status(401).json({ error: "Non autorizzato" });
+    }
+
     upload.single('csvFile')(req, res, (err) => {
       if (err) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -535,11 +557,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next();
     });
   }, async (req, res) => {
-    // Security: Disable in production
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(403).json({ error: "Import endpoint disabled in production" });
-    }
-    
     try {
       if (!req.file) {
         return res.status(400).json({ error: "Nessun file CSV caricato" });

@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ThumbsUp, ThumbsDown, Filter } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ThumbsUp, ThumbsDown, Filter, Trash2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface AnalyticsProps {
   onBack?: () => void;
@@ -53,6 +64,10 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
   const [sortField, setSortField] = useState<SortField>('likeCount');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch analytics data
   const { data: analytics, isLoading, error } = useQuery({
@@ -61,6 +76,40 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
       const response = await fetch('/api/analytics');
       if (!response.ok) throw new Error('Failed to fetch analytics');
       return response.json();
+    }
+  });
+
+  // Delete all data mutation
+  const deleteAllDataMutation = useMutation({
+    mutationFn: async () => {
+      // Delete quiz answers
+      const answersResponse = await fetch('/api/quiz-answers/delete-all', {
+        method: 'DELETE',
+      });
+      if (!answersResponse.ok) throw new Error('Failed to delete quiz answers');
+
+      // Delete feedback
+      const feedbackResponse = await fetch('/api/feedback/delete-all', {
+        method: 'DELETE',
+      });
+      if (!feedbackResponse.ok) throw new Error('Failed to delete feedback');
+
+      return { answersResponse, feedbackResponse };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['analytics'] });
+      toast({
+        title: "Dati eliminati",
+        description: "Tutte le risposte e i feedback sono stati eliminati con successo",
+      });
+      setShowDeleteDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: "Errore nell'eliminazione dei dati: " + error.message,
+        variant: "destructive",
+      });
     }
   });
 
@@ -161,6 +210,15 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
             </Button>
             <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
           </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setShowDeleteDialog(true)}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Elimina Tutti i Dati
+          </Button>
         </div>
       </div>
 
@@ -422,6 +480,29 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sei assolutamente sicuro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Questa azione eliminerà PERMANENTEMENTE tutte le risposte ai quiz e tutti i feedback.
+              Non sarà possibile recuperare questi dati. Le statistiche verranno azzerate.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteAllDataMutation.mutate()}
+              disabled={deleteAllDataMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteAllDataMutation.isPending ? 'Eliminando...' : 'Sì, elimina tutto'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
