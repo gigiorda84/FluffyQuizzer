@@ -33,20 +33,20 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
 
   const instructionSlides = [
     {
-      title: "Benvenuto in Fluffy Trivia!",
-      content: "Metti alla prova le tue conoscenze con il nostro divertente quiz sul cibo e la cultura alimentare. Qui troverai domande interessanti e curiosità che ti faranno scoprire tante cose nuove!"
+      title: "🌈 Benvenut* nel mondo Fluffy!",
+      content: "Hai davanti una missione importante: aiutarci a scegliere le domande ufficiali del gioco più assurdo e istruttivo del pianeta.\n\n🎲 Metti alla prova il tuo cervello (e il tuo intestino) con il nostro quiz su cibo, ambiente e cultura alimentare. Ti promettiamo risate, scoperte e qualche colpo di scena digeribile."
     },
     {
-      title: "Come si gioca",
-      content: "Clicca su 'Gioca' per iniziare una partita con domande miste da tutte le categorie. Leggi attentamente ogni domanda e scegli la risposta che ritieni corretta tra le opzioni disponibili."
+      title: "💡 Come si gioca",
+      content: "Premi \"Gioca\" e tuffati nel delirio: troverai domande miste da tutte le categorie.\n\nLeggi, rispondi e fidati del tuo istinto… o del tuo colon.\n\nPer passare alla prossima domanda lascia un feedback in fondo o fai uno swipe felice."
     },
     {
-      title: "Categorie del quiz",
-      content: "Le domande spaziano tra diverse categorie: Cibi Furbi & Cibi Trappola, Il Pianeta nel Piatto, Cultura del Cibo e Anatomia a Tavola. Ogni categoria ha il suo colore distintivo!"
+      title: "🍆 Le categorie Fluffy",
+      content: "🧠 Cibi Furbi & Cibi Trappola – il bene, il male e la maionese.\n\n🌍 Il Pianeta nel Piatto – perché ogni boccone ha un'impronta.\n\n🍽️ Cultura del Cibo – curiosità, leggende e cagate colte.\n\n🫀 Anatomia a Tavola – quello che il tuo corpo pensa mentre tu mastichi."
     },
     {
-      title: "Divertiti e impara!",
-      content: "Non preoccuparti se sbagli qualche risposta - l'importante è imparare divertendosi! Ogni domanda è un'opportunità per scoprire qualcosa di nuovo sul mondo del cibo."
+      title: "💚 Divertiti, impara e sbaglia con orgoglio!",
+      content: "In Fluffy non esistono errori: solo nuove fibre per la mente.\n\nOgni domanda è un morso di consapevolezza… condito con un pizzico di ironia.\n\nGrazie per far parte della rivoluzione più morbida (e più intelligente) del mondo. ✨"
     }
   ];
 
@@ -58,30 +58,24 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
     setCurrentSlide((prev) => (prev - 1 + instructionSlides.length) % instructionSlides.length);
   };
 
-  const handleDialogClose = () => {
-    setIsInstructionsOpen(false);
-    setCurrentSlide(0);
-  };
-
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ backgroundColor: '#7cdacf' }}>
-      {/* Background Image - anchored to bottom center */}
+      {/* Background Image - full width at bottom */}
       <img
         src="/background-main.jpg"
         alt="background"
-        className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-3/4 max-w-4xl object-contain"
+        className="absolute bottom-0 left-0 w-full object-cover object-bottom"
         style={{ maxHeight: '60vh' }}
       />
 
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-8">
-        {/* Logo and Title Section */}
+        {/* Logo Section */}
         <div className="text-center mb-16">
           <img
-            src="/fluffy-logo.svg"
+            src="/fluffy-logo.png"
             alt="Fluffy Revolution Logo"
             className="h-32 w-auto mx-auto mb-6"
           />
-          <h1 className="text-5xl font-black text-black uppercase tracking-wider">THE GAME</h1>
         </div>
 
         {/* Three Main Buttons */}
@@ -101,7 +95,7 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
                   <h3 className="text-3xl font-bold text-center uppercase tracking-wide text-foreground mb-6">
                     {instructionSlides[currentSlide].title}
                   </h3>
-                  <p className="text-lg leading-relaxed text-muted-foreground text-center">
+                  <p className="text-lg leading-relaxed text-muted-foreground text-center whitespace-pre-line">
                     {instructionSlides[currentSlide].content}
                   </p>
                 </div>
@@ -122,26 +116,24 @@ export default function CategorySelector({ categories, onSelectCategory, onSelec
                     {currentSlide + 1} di {instructionSlides.length}
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={nextSlide}
-                    className="border-2 border-foreground bg-card hover:bg-muted h-12 w-12"
-                    disabled={currentSlide === instructionSlides.length - 1}
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </Button>
-                </div>
-
-                {/* Close Button */}
-                <div className="text-center pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleDialogClose}
-                    className="border-2 border-foreground bg-card hover:bg-muted text-foreground uppercase tracking-wide px-10 py-5 text-base"
-                  >
-                    CHIUDI
-                  </Button>
+                  {currentSlide === instructionSlides.length - 1 ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsInstructionsOpen(false)}
+                      className="border-2 border-foreground bg-card hover:bg-muted h-12 px-6"
+                    >
+                      <span className="text-sm font-semibold uppercase">Chiudi</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={nextSlide}
+                      className="border-2 border-foreground bg-card hover:bg-muted h-12 w-12"
+                    >
+                      <ChevronRight className="h-6 w-6" />
+                    </Button>
+                  )}
                 </div>
               </div>
             </DialogContent>
