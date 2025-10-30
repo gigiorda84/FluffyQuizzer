@@ -47,6 +47,12 @@ interface AnalyticsData {
     overallCorrectPercentage: number;
     totalFeedbackEntries: number;
   };
+  sessionStats: {
+    totalSessions: number;
+    completedSessions: number;
+    avgCardsPerSession: number;
+    avgSessionDurationSeconds: number;
+  };
   cardStats: CardStats[];
   mostLikedCards: CardStats[];
   bestPerformingCards: CardStats[];
@@ -276,6 +282,38 @@ export default function AnalyticsNew({ onBack }: AnalyticsProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Session Statistics */}
+        {analytics.sessionStats && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Statistiche Sessioni</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="text-4xl font-bold text-primary">{analytics.sessionStats.totalSessions}</div>
+                  <div className="text-sm text-muted-foreground mt-2">Numero di Sessioni</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    ({analytics.sessionStats.completedSessions} completate)
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="text-4xl font-bold text-primary">{analytics.sessionStats.avgCardsPerSession}</div>
+                  <div className="text-sm text-muted-foreground mt-2">Carte per Sessione</div>
+                  <div className="text-xs text-muted-foreground mt-1">(media)</div>
+                </div>
+                <div className="text-center p-4 bg-muted/50 rounded-lg">
+                  <div className="text-4xl font-bold text-primary">
+                    {Math.floor(analytics.sessionStats.avgSessionDurationSeconds / 60)}:{String(analytics.sessionStats.avgSessionDurationSeconds % 60).padStart(2, '0')}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-2">Durata Media Sessione</div>
+                  <div className="text-xs text-muted-foreground mt-1">(minuti:secondi)</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Top Lists */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

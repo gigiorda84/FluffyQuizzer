@@ -198,18 +198,18 @@ export default function QuizCard({
   const styles = getCategoryStyles(colore);
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div
-        ref={cardRef}
-        className="w-full bg-gray-100 min-h-screen flex flex-col transition-all duration-300 ease-out"
-        style={{
-          transform: getSwipeTransform(),
-          opacity: getSwipeOpacity()
-        }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+    <div
+      ref={cardRef}
+      className="w-full bg-gray-100 min-h-screen flex flex-col"
+      style={{
+        transform: getSwipeTransform(),
+        opacity: getSwipeOpacity(),
+        transition: swipeDirection || (touchStart && touchCurrent) ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
         {/* Header */}
         <div className={`${styles.headerBg} px-6 py-4 md:py-4 flex justify-between items-center`}>
           <button
@@ -292,7 +292,7 @@ export default function QuizCard({
 
           {/* Feedback Section - Swipe or Tap */}
           {!feedbackGiven && (
-            <div className="flex-shrink-0 mt-4 md:mt-6 mb-16 md:mb-8">
+            <div className="flex-shrink-0 mt-0 md:mt-2 mb-20 md:mb-12">
               <div className="flex justify-center gap-24">
                 <button
                   onClick={() => handleFeedbackSubmit(false)}
@@ -314,7 +314,5 @@ export default function QuizCard({
         </div>
 
       </div>
-
-    </div>
   );
 }

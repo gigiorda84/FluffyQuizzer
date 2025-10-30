@@ -48,6 +48,7 @@ export interface IStorage {
   createGameSession(session: InsertGameSession): Promise<GameSession>;
   getGameSession(id: string): Promise<GameSession | undefined>;
   updateGameSession(id: string, data: Partial<InsertGameSession>): Promise<GameSession | undefined>;
+  getAllGameSessions(): Promise<GameSession[]>;
 
   // Quiz Answer methods
   createQuizAnswer(answer: InsertQuizAnswer): Promise<QuizAnswer>;
@@ -224,6 +225,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(gameSessions.id, id))
       .returning();
     return updatedSession || undefined;
+  }
+
+  async getAllGameSessions(): Promise<GameSession[]> {
+    return db.select().from(gameSessions);
   }
 
   // Quiz Answer methods

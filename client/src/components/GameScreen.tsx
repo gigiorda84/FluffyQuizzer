@@ -35,21 +35,39 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
   const { sessionId, deviceId, incrementCardsPlayed, incrementFeedbackCount } = useGameSession();
   const queryClient = useQueryClient();
 
-  // Fetch random card (optionally filtered by category)
+  // Fetch current card
   const { data: currentCard, isLoading, error, refetch } = useQuery({
     queryKey: ['cards', 'random', selectedCategory || 'all', cardKey],
     queryFn: async (): Promise<Card> => {
-      const url = selectedCategory && selectedCategory !== 'mix' 
+      const url = selectedCategory && selectedCategory !== 'mix'
         ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
         : '/api/cards/random';
-      
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch card');
       }
       return response.json();
     },
-    enabled: selectedCategory !== null, // Prevent initial fetch when category is null
+    enabled: selectedCategory !== null,
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch next card (for stack effect)
+  const { data: nextCard } = useQuery({
+    queryKey: ['cards', 'random', selectedCategory || 'all', cardKey + 1],
+    queryFn: async (): Promise<Card> => {
+      const url = selectedCategory && selectedCategory !== 'mix'
+        ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
+        : '/api/cards/random';
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch card');
+      }
+      return response.json();
+    },
+    enabled: selectedCategory !== null && currentCard !== undefined,
     refetchOnWindowFocus: false,
   });
 
@@ -74,28 +92,6 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
     setShowFeedback(false);
     setAnswered(false);
   }, [cardKey]);
-
-  // Prefetch next card
-  useEffect(() => {
-    if (currentCard && selectedCategory !== null) {
-      // Prefetch the next card in background
-      const nextKey = cardKey + 1;
-      const url = selectedCategory && selectedCategory !== 'mix'
-        ? `/api/cards/random?categoria=${encodeURIComponent(selectedCategory)}`
-        : '/api/cards/random';
-
-      queryClient.prefetchQuery({
-        queryKey: ['cards', 'random', selectedCategory || 'all', nextKey],
-        queryFn: async (): Promise<Card> => {
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error('Failed to fetch card');
-          }
-          return response.json();
-        },
-      });
-    }
-  }, [currentCard, cardKey, selectedCategory, queryClient]);
 
   const handleAnswer = (selectedOption: 'A' | 'B' | 'C', correct: boolean, timeMs: number) => {
     setAnswered(true);
@@ -144,39 +140,84 @@ export default function GameScreen({ selectedCategory, onBack }: GameScreenProps
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Card Content */}
-      <div className="flex-1 flex flex-col">
-        {currentCard.tipo === 'quiz' ? (
-          <QuizCard
-            id={currentCard.id}
-            categoria={currentCard.categoria}
-            colore={currentCard.colore}
-            domanda={currentCard.domanda}
-            opzioneA={currentCard.opzioneA!}
-            opzioneB={currentCard.opzioneB!}
-            opzioneC={currentCard.opzioneC!}
-            corretta={currentCard.corretta!}
-            battuta={currentCard.battuta}
-            sessionId={sessionId}
-            deviceId={deviceId}
-            onAnswer={handleAnswer}
-            onFeedback={handleFeedbackReaction}
-            onNext={handleNext}
-            onBack={onBack}
-          />
-        ) : (
-          <SpecialCard
-            id={currentCard.id}
-            categoria={currentCard.categoria}
-            titolo={currentCard.domanda}
-            descrizione={currentCard.battuta || "Carta speciale senza descrizione"}
-            sessionId={sessionId}
-            deviceId={deviceId}
-            onNext={handleNext}
-            onFeedback={handleFeedbackReaction}
-            onBack={onBack}
-          />
+      {/* Card Stack Container */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Next Card - Behind */}
+        {nextCard && (
+          <div
+            className="absolute inset-0 z-0 pointer-events-none"
+            style={{
+              opacity: 1
+            }}
+          >
+            {nextCard.tipo === 'quiz' ? (
+              <QuizCard
+                id={nextCard.id}
+                categoria={nextCard.categoria}
+                colore={nextCard.colore}
+                domanda={nextCard.domanda}
+                opzioneA={nextCard.opzioneA!}
+                opzioneB={nextCard.opzioneB!}
+                opzioneC={nextCard.opzioneC!}
+                corretta={nextCard.corretta!}
+                battuta={nextCard.battuta}
+                sessionId={sessionId}
+                deviceId={deviceId}
+                onAnswer={() => {}}
+                onFeedback={() => {}}
+                onNext={() => {}}
+                onBack={onBack}
+              />
+            ) : (
+              <SpecialCard
+                id={nextCard.id}
+                categoria={nextCard.categoria}
+                titolo={nextCard.domanda}
+                descrizione={nextCard.battuta || "Carta speciale senza descrizione"}
+                sessionId={sessionId}
+                deviceId={deviceId}
+                onNext={() => {}}
+                onFeedback={() => {}}
+                onBack={onBack}
+              />
+            )}
+          </div>
         )}
+
+        {/* Current Card - On Top */}
+        <div className="absolute inset-0 z-10">
+          {currentCard.tipo === 'quiz' ? (
+            <QuizCard
+              id={currentCard.id}
+              categoria={currentCard.categoria}
+              colore={currentCard.colore}
+              domanda={currentCard.domanda}
+              opzioneA={currentCard.opzioneA!}
+              opzioneB={currentCard.opzioneB!}
+              opzioneC={currentCard.opzioneC!}
+              corretta={currentCard.corretta!}
+              battuta={currentCard.battuta}
+              sessionId={sessionId}
+              deviceId={deviceId}
+              onAnswer={handleAnswer}
+              onFeedback={handleFeedbackReaction}
+              onNext={handleNext}
+              onBack={onBack}
+            />
+          ) : (
+            <SpecialCard
+              id={currentCard.id}
+              categoria={currentCard.categoria}
+              titolo={currentCard.domanda}
+              descrizione={currentCard.battuta || "Carta speciale senza descrizione"}
+              sessionId={sessionId}
+              deviceId={deviceId}
+              onNext={handleNext}
+              onFeedback={handleFeedbackReaction}
+              onBack={onBack}
+            />
+          )}
+        </div>
       </div>
 
     </div>

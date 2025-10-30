@@ -383,6 +383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cards = await storage.getAllCards();
       const quizAnswers = await storage.getAllQuizAnswers();
       const allFeedback = await storage.getAllFeedback();
+      const allSessions = await storage.getAllGameSessions();
 
       // Group quiz answers by card
       const cardStatsMap = new Map();
@@ -473,6 +474,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.round((totalCorrect / totalQuizAnswers) * 100)
         : 0;
 
+      // Session statistics
+      const completedSessions = allSessions.filter(s => s.endedAt !== null);
+      const totalSessions = allSessions.length;
+      const avgCardsPerSession = totalSessions > 0
+        ? Math.round(allSessions.reduce((sum, s) => sum + (s.cardsPlayed || 0), 0) / totalSessions * 10) / 10
+        : 0;
+
+      const sessionsWithDuration = completedSessions.filter(s => s.durationMs !== null);
+      const avgSessionDuration = sessionsWithDuration.length > 0
+        ? Math.round(sessionsWithDuration.reduce((sum, s) => sum + (s.durationMs || 0), 0) / sessionsWithDuration.length / 1000)
+        : 0;
+
       const response = {
         overview: {
           totalCards: cards.length,
@@ -481,6 +494,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalWrong,
           overallCorrectPercentage,
           totalFeedbackEntries: allFeedback.length
+        },
+        sessionStats: {
+          totalSessions,
+          completedSessions: completedSessions.length,
+          avgCardsPerSession,
+          avgSessionDurationSeconds: avgSessionDuration
         },
         cardStats, // All cards with stats (filtered by minimum 1 feedback)
         mostLikedCards,

@@ -113,14 +113,18 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
   };
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div
-        ref={cardRef}
-        className="w-full bg-gray-100 min-h-screen flex flex-col"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+    <div
+      ref={cardRef}
+      className="w-full bg-gray-100 min-h-screen flex flex-col"
+      style={{
+        transform: getSwipeTransform(),
+        opacity: getSwipeOpacity(),
+        transition: swipeDirection || (touchStart && touchCurrent) ? 'transform 0.3s ease-out, opacity 0.3s ease-out' : 'none'
+      }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-400 to-yellow-400 px-6 py-4 flex justify-between items-center">
           <button
@@ -186,7 +190,5 @@ export default function SpecialCard({ id, categoria, titolo, descrizione, sessio
         )}
 
       </div>
-
-    </div>
   );
 }
