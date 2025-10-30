@@ -66,5 +66,11 @@ app.use("*", (_req, res) => {
   res.sendFile(path.resolve(distPath, "index.html"));
 });
 
+// Start server for traditional hosting (Render, etc.)
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  log(`Server running on port ${PORT}`);
+});
+
 // Export for Vercel serverless
 export default app;
