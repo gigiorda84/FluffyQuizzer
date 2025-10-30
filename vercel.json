@@ -1,28 +1,3 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "builds": [
-    {
-      "src": "dist/public/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "dist/index.prod.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "includeFiles": ["dist/public/**"]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/assets/(.*)",
-      "dest": "/dist/public/assets/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/index.prod.js"
-    }
-  ]
+  "buildCommand": "bash build-vercel.sh"
 }
