@@ -198,7 +198,7 @@ export default function QuizCard({
         onTouchEnd={handleTouchEnd}
       >
         {/* Header */}
-        <div className={`${styles.headerBg} px-6 py-4 flex justify-between items-center`}>
+        <div className={`${styles.headerBg} px-6 py-2 md:py-4 flex justify-between items-center`}>
           <button
             onClick={onBack}
             className="text-white font-bold text-lg uppercase tracking-wider"
@@ -220,9 +220,9 @@ export default function QuizCard({
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 bg-gray-100 flex flex-col px-8 py-6">
+        <div className="flex-1 bg-gray-100 flex flex-col px-6 py-3 md:px-8 md:py-6">
           {/* Question */}
-          <div className="flex-shrink-0 mb-6">
+          <div className="flex-shrink-0 mb-3 md:mb-6">
             <h1 className="text-xl md:text-2xl font-black text-black leading-tight uppercase tracking-wide text-center">
               {domanda}
             </h1>
@@ -230,7 +230,7 @@ export default function QuizCard({
 
           {/* Answer Options */}
           <div className="flex-1 flex items-center justify-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-5xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 w-full max-w-5xl">
               {['A', 'B', 'C'].map((opt) => {
                 const optionText = opt === 'A' ? opzioneA : opt === 'B' ? opzioneB : opzioneC;
                 const isCorrect = opt === corretta;
@@ -270,7 +270,7 @@ export default function QuizCard({
 
           {/* Comment */}
           {showResult && battuta && (
-            <div className="flex-shrink-0 mt-6">
+            <div className="flex-shrink-0 mt-3 md:mt-6">
               <p className="text-base md:text-lg text-black font-bold leading-relaxed text-center">
                 {battuta}
               </p>
@@ -280,21 +280,21 @@ export default function QuizCard({
 
         {/* Feedback Section - Swipe or Tap */}
         {!feedbackGiven && (
-          <div className="px-8 py-8">
+          <div className="px-6 py-4 md:px-8 md:py-8">
             <div className="flex justify-center gap-8">
               <button
                 onClick={() => handleFeedbackSubmit(false)}
-                className="flex items-center justify-center p-6 rounded-full bg-red-500 hover:bg-red-600 transition-all transform hover:scale-110"
+                className="flex items-center justify-center p-4 md:p-6 rounded-full bg-red-500 hover:bg-red-600 transition-all transform hover:scale-110"
                 data-testid="button-feedback-dislike"
               >
-                <ThumbsDown className="w-12 h-12 text-white" />
+                <ThumbsDown className="w-10 h-10 md:w-12 md:h-12 text-white" />
               </button>
               <button
                 onClick={() => handleFeedbackSubmit(true)}
-                className="flex items-center justify-center p-6 rounded-full bg-green-500 hover:bg-green-600 transition-all transform hover:scale-110"
+                className="flex items-center justify-center p-4 md:p-6 rounded-full bg-green-500 hover:bg-green-600 transition-all transform hover:scale-110"
                 data-testid="button-feedback-like"
               >
-                <ThumbsUp className="w-12 h-12 text-white" />
+                <ThumbsUp className="w-10 h-10 md:w-12 md:h-12 text-white" />
               </button>
             </div>
           </div>
